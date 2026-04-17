@@ -692,7 +692,10 @@ export default function BuilderView() {
               <TouchableOpacity style={[styles.chip, viewMode === 'deck' && styles.activeChip]} onPress={() => setViewMode('deck')}>
                 <Text style={[styles.chipText, viewMode === 'deck' && styles.activeChipText]}>Cards</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.chip, viewMode === 'search' && styles.activeChip]} onPress={() => setViewMode('search')}>
+              <TouchableOpacity style={[styles.chip, viewMode === 'search' && styles.activeChip]} onPress={() => {
+                setIsAddingCommander(false);
+                setViewMode('search');
+              }}>
                 <Text style={[styles.chipText, viewMode === 'search' && styles.activeChipText]}>Search</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.chip, viewMode === 'import' && styles.activeChip]} onPress={() => setViewMode('import')}>
@@ -760,7 +763,13 @@ export default function BuilderView() {
                         {renderCardItem({ item: currentDeck.commander, isCommander: true })}
                       </View>
                     ) : (
-                      <TouchableOpacity style={styles.bigAddCommanderBtn} onPress={() => setViewMode('search')}>
+                      <TouchableOpacity 
+                        style={styles.bigAddCommanderBtn} 
+                        onPress={() => {
+                          setIsAddingCommander(true);
+                          setViewMode('search');
+                        }}
+                      >
                         <UserPlus color="#856404" size={24} />
                         <Text style={styles.bigAddCommanderText}>Add Commander</Text>
                       </TouchableOpacity>

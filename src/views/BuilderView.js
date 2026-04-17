@@ -244,7 +244,9 @@ export default function BuilderView() {
     const updatedDecks = decks.map(d => {
       if (d.id === currentDeckId) {
         if (asCommander) {
-          return { ...d, commander: { ...card, instanceId: 'commander' } };
+          // If setting as commander, explicitly remove from regular cards list if present
+          const filteredCards = d.cards.filter(c => c.name.toLowerCase() !== card.name.toLowerCase());
+          return { ...d, commander: { ...card, instanceId: 'commander' }, cards: filteredCards };
         }
         
         const isDuplicate = d.cards.some(c => c.name.toLowerCase() === card.name.toLowerCase());
@@ -1039,13 +1041,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#fff',
+    paddingVertical: Platform.OS === 'web' ? 15 : 5,
+    paddingTop: Platform.OS === 'web' ? 10 : 0,
   },
   indexHeader: {
-    marginTop: 20,
+    marginTop: Platform.OS === 'web' ? 10 : 20,
     marginBottom: 20,
   },
   builderHeader: {
-    marginTop: 0,
+    marginTop: Platform.OS === 'web' ? 5 : 0,
     marginBottom: 10,
     paddingTop: 0,
   },

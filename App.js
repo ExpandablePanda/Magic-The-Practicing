@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   versionBar: {
     alignItems: 'flex-end',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 8 : 4,
+    paddingTop: Platform.OS === 'web' ? 15 : 4,
     paddingBottom: 2,
     backgroundColor: '#fff',
   },
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
   navShell: {
     flexDirection: 'row',
-    height: Platform.OS === 'web' ? 70 : 85,
+    height: Platform.OS === 'web' ? 80 : 85,
     borderTopWidth: 1,
     borderTopColor: '#eee',
     justifyContent: 'space-around',

@@ -755,20 +755,19 @@ export default function BuilderView() {
 
       {viewMode === 'decks' && (
         <View style={styles.deckListContainer}>
+          <View style={styles.dashboardHeader}>
+            <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING</Text>
+            <Text style={styles.mainTitle}>MY DECKS</Text>
+          </View>
           <FlatList
             data={decks}
             key={Platform.OS === 'web' ? 'grid' : 'list'}
             numColumns={Platform.OS === 'web' ? 2 : 1}
             keyExtractor={item => item.id}
             renderItem={renderDeckItem}
-            ListHeaderComponent={(
-              <View style={styles.dashboardHeader}>
-                <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING</Text>
-                <Text style={styles.mainTitle}>MY DECKS</Text>
-              </View>
-            )}
             ListEmptyComponent={<Text style={styles.emptyText}>No decks found. Create one!</Text>}
             contentContainerStyle={styles.listContent}
+            style={styles.flex1}
           />
           <TouchableOpacity style={styles.createNewButton} onPress={createNewDeck}>
             <Text style={styles.importButtonText}>+ Create New Deck</Text>
@@ -1051,8 +1050,9 @@ const styles = StyleSheet.create({
     minWidth: 300,
   },
   dashboardHeader: {
-    paddingVertical: 20,
-    marginBottom: 10,
+    paddingVertical: 25,
+    paddingHorizontal: 0,
+    backgroundColor: '#fff',
     width: '100%',
   },
   chipBarContainer: {

@@ -1023,7 +1023,6 @@ export default function BuilderView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 15,
     backgroundColor: '#fff',
     width: '100%',
   },
@@ -1041,7 +1040,8 @@ const styles = StyleSheet.create({
   },
   deckListContainer: {
     flex: 1,
-    paddingTop: Platform.OS === 'web' ? 10 : 0,
+    paddingTop: Platform.OS === 'web' ? 20 : 0,
+    paddingHorizontal: 20,
   },
   createBtnWebContainer: {
     backgroundColor: '#fff',
@@ -1077,6 +1077,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingVertical: Platform.OS === 'web' ? 15 : 5,
     paddingTop: Platform.OS === 'web' ? 10 : 0,
+    paddingHorizontal: 20,
   },
   indexHeader: {
     marginTop: Platform.OS === 'web' ? 10 : 20,
@@ -1372,7 +1373,7 @@ const styles = StyleSheet.create({
   },
   typeSection: {
     marginBottom: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
     paddingVertical: 5,
     width: '100%',
   },
@@ -1433,6 +1434,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     height: 50,
     marginBottom: 10,
+    marginHorizontal: 20,
+    marginTop: 15,
   },
   input: {
     flex: 1,
@@ -1442,6 +1445,8 @@ const styles = StyleSheet.create({
   importContainer: {
     gap: 12,
     marginBottom: 20,
+    paddingHorizontal: 20,
+    marginTop: 15,
   },
   importInput: {
     backgroundColor: '#f5f5f5',

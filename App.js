@@ -162,11 +162,10 @@ const styles = StyleSheet.create({
     color: '#b30000',
   },
   versionBar: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 15 : 4,
-    paddingBottom: 2,
-    backgroundColor: '#fff',
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 10 : 4,
+    right: 20,
+    zIndex: 1000,
   },
   version: {
     fontSize: 11,

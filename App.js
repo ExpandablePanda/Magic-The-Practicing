@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Home, Play, Wrench, User as UserIcon, Heart } from 'lucide-react-native';
+import { Home, Play, Wrench, User as UserIcon, Heart, BarChart2 } from 'lucide-react-native';
 import { supabase } from './src/services/supabase';
 
 import LandingView from './src/views/LandingView';
@@ -9,6 +9,7 @@ import PlayView from './src/views/PlayView';
 import BuilderView from './src/views/BuilderView';
 import AuthView from './src/views/AuthView';
 import ScoreView from './src/views/ScoreView';
+import StatsView from './src/views/StatsView';
 import WebShell from './src/components/WebShell';
 
 const APP_VERSION = 'V.1.0.2';
@@ -75,6 +76,8 @@ export default function App() {
         return <BuilderView />;
       case 'score':
         return <ScoreView onBack={() => setCurrentView('landing')} />;
+      case 'stats':
+        return <StatsView />;
       case 'account':
         return (
           <View style={accountStyles.container}>
@@ -125,6 +128,10 @@ export default function App() {
           <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('score')}>
             <Heart color={currentView === 'score' ? '#b30000' : '#999'} size={24} />
             <Text style={[styles.navText, currentView === 'score' && styles.activeNav]}>Score</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('stats')}>
+            <BarChart2 color={currentView === 'stats' ? '#b30000' : '#999'} size={24} />
+            <Text style={[styles.navText, currentView === 'stats' && styles.activeNav]}>Stats</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('account')}>
             <UserIcon color={currentView === 'account' ? '#b30000' : '#999'} size={24} />

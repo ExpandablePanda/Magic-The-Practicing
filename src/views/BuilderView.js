@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Modal, Pressable, ScrollView, Platform } from 'react-native';
-import { Search, Save, Plus, Check, ArrowLeft, ChevronRight, LayoutGrid, FileText, BarChart2, UserPlus } from 'lucide-react-native';
+import { Search, Save, Plus, Check, ArrowLeft, ChevronLeft, ChevronRight, LayoutGrid, FileText, BarChart2, UserPlus } from 'lucide-react-native';
 import { ScryfallService } from '../services/scryfall';
 import { StorageService } from '../services/storage';
 
@@ -33,6 +33,7 @@ export default function BuilderView() {
   const [metaSuggestLoading, setMetaSuggestLoading] = useState(false);
   const [metaError, setMetaError] = useState(null);
   const [metaAddedNames, setMetaAddedNames] = useState(new Set());
+  const [metaGalleryIndex, setMetaGalleryIndex] = useState(null);
 
   // Load decks on mount
   useEffect(() => {
@@ -179,6 +180,7 @@ export default function BuilderView() {
       })).filter(c => c.imageUrl);
 
       setMetaTopCards(cards);
+      setMetaGalleryIndex(cards.length > 0 ? 0 : null);
     } catch (e) {
       setMetaError(e.message || 'Failed to load data.');
     } finally {
@@ -571,7 +573,7 @@ export default function BuilderView() {
         <View style={styles.cardActions}>
           <TouchableOpacity
             style={viewMode === 'search' ? styles.addButton : styles.removeButton}
-            onPress={() => viewMode === 'search' ? addToDeck(item, isAddingCommander) : removeFromDeck(item.instanceId, isCommander)}
+            onPress={() => viewMode === 'search' ? addToDeck(item, isAddingCommander) : removeFromDeck(item.instanceId, isCommander, viewMode === 'maybe')}
           >
             {viewMode === 'search' ? <Plus color="#fff" size={20} /> : <Text style={styles.removeIcon}>×</Text>}
           </TouchableOpacity>
@@ -906,21 +908,64 @@ export default function BuilderView() {
                 </View>
 
                 <Text style={metaStyles.sectionLabel}>Trending Cards for {metaCommander.name}</Text>
+
+                {metaGalleryIndex !== null && metaTopCards.length > 0 && (
+                  <View style={metaStyles.galleryRow}>
+                    <TouchableOpacity
+                      style={[metaStyles.galleryArrow, metaGalleryIndex === 0 && { opacity: 0.2 }]}
+                      onPress={() => setMetaGalleryIndex(i => Math.max(0, i - 1))}
+                      disabled={metaGalleryIndex === 0}
+                    >
+                      <ChevronLeft color="#333" size={28} />
+                    </TouchableOpacity>
+
+                    <View style={metaStyles.galleryCard}>
+                      <Image
+                        source={{ uri: metaTopCards[metaGalleryIndex].imageUrl }}
+                        style={metaStyles.galleryImage}
+                        resizeMode="contain"
+                      />
+                      <View style={metaStyles.galleryInfo}>
+                        <Text style={metaStyles.galleryName}>{metaTopCards[metaGalleryIndex].name}</Text>
+                        <Text style={metaStyles.galleryType}>{metaTopCards[metaGalleryIndex].type_line}</Text>
+                        <Text style={metaStyles.galleryCounter}>{metaGalleryIndex + 1} / {metaTopCards.length}</Text>
+                        <TouchableOpacity
+                          style={[metaStyles.galleryAddBtn, metaAddedNames.has(metaTopCards[metaGalleryIndex].name) && { backgroundColor: '#2d8a4e' }]}
+                          onPress={() => addMetagameCard(metaTopCards[metaGalleryIndex])}
+                        >
+                          {metaAddedNames.has(metaTopCards[metaGalleryIndex].name)
+                            ? <><Check color="#fff" size={16} /><Text style={metaStyles.galleryAddText}>ADDED</Text></>
+                            : <><Plus color="#fff" size={16} /><Text style={metaStyles.galleryAddText}>ADD TO DECK</Text></>
+                          }
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[metaStyles.galleryArrow, metaGalleryIndex === metaTopCards.length - 1 && { opacity: 0.2 }]}
+                      onPress={() => setMetaGalleryIndex(i => Math.min(metaTopCards.length - 1, i + 1))}
+                      disabled={metaGalleryIndex === metaTopCards.length - 1}
+                    >
+                      <ChevronRight color="#333" size={28} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 <View style={metaStyles.cardGrid}>
                   {metaTopCards.map((card, i) => (
                     <View key={i} style={metaStyles.cardCell}>
-                      <TouchableOpacity onPress={() => setPreviewCard(card)}>
+                      <TouchableOpacity onPress={() => setMetaGalleryIndex(i)}>
                         <Image
                           source={{ uri: card.imageUrl }}
-                          style={metaStyles.cardImage}
+                          style={[metaStyles.cardImage, metaGalleryIndex === i && metaStyles.cardImageSelected]}
                           resizeMode="contain"
                         />
                       </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={metaStyles.addOverlay} 
+                      <TouchableOpacity
+                        style={[metaStyles.addOverlay, metaAddedNames.has(card.name) && { backgroundColor: 'rgba(45,138,78,0.85)' }]}
                         onPress={() => addMetagameCard(card)}
                       >
-                        {metaAddedNames.has(card.name) ? <Check color="#fff" size={20} /> : <Plus color="#fff" size={20} />}
+                        {metaAddedNames.has(card.name) ? <Check color="#fff" size={14} /> : <Plus color="#fff" size={14} />}
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -1706,5 +1751,68 @@ const metaStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
+  },
+  cardImageSelected: {
+    borderWidth: 3,
+    borderColor: '#b30000',
+    borderRadius: 6,
+  },
+  galleryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  galleryArrow: {
+    padding: 4,
+  },
+  galleryCard: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  galleryImage: {
+    width: 120,
+    height: 168,
+    borderRadius: 8,
+  },
+  galleryInfo: {
+    flex: 1,
+    gap: 6,
+    paddingTop: 4,
+  },
+  galleryName: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#1a1a1a',
+  },
+  galleryType: {
+    fontSize: 11,
+    color: '#777',
+  },
+  galleryCounter: {
+    fontSize: 10,
+    color: '#bbb',
+    fontWeight: '700',
+  },
+  galleryAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#b30000',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  galleryAddText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '900',
   },
 });

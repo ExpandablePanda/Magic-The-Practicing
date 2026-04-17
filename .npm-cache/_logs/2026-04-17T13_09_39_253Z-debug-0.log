@@ -1,0 +1,79 @@
+0 verbose cli /usr/local/bin/node /usr/local/bin/npm
+1 info using npm@11.11.0
+2 info using node@v24.14.1
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/andrewmarkschaffer/App Development/magic-the-practicing-app/.npmrc
+5 silly config load:file:/Users/andrewmarkschaffer/.npmrc
+6 silly config load:file:/usr/local/etc/npmrc
+7 verbose title npm install react-native-web react-dom @expo/metro-runtime @supabase/supabase-js
+8 verbose argv "install" "--cache" "./.npm-cache" "react-native-web" "react-dom" "@expo/metro-runtime" "@supabase/supabase-js"
+9 verbose logfile logs-max:10 dir:/Users/andrewmarkschaffer/App Development/magic-the-practicing-app/.npm-cache/_logs/2026-04-17T13_09_39_253Z-
+10 verbose logfile /Users/andrewmarkschaffer/App Development/magic-the-practicing-app/.npm-cache/_logs/2026-04-17T13_09_39_253Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 silly logfile done cleaning log files
+14 silly idealTree buildDeps
+15 silly fetch manifest react-native-web@*
+16 silly packumentCache full:https://registry.npmjs.org/react-native-web cache-miss
+17 http fetch GET 200 https://registry.npmjs.org/react-native-web 374ms (cache miss)
+18 silly packumentCache full:https://registry.npmjs.org/react-native-web set size:undefined disposed:false
+19 silly fetch manifest react@19.1.0
+20 silly packumentCache full:https://registry.npmjs.org/react cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/react 222ms (cache updated)
+22 silly packumentCache full:https://registry.npmjs.org/react set size:undefined disposed:false
+23 silly fetch manifest react-dom@*
+24 silly packumentCache full:https://registry.npmjs.org/react-dom cache-miss
+25 http fetch GET 200 https://registry.npmjs.org/react-dom 218ms (cache updated)
+26 silly packumentCache full:https://registry.npmjs.org/react-dom set size:undefined disposed:false
+27 silly fetch manifest react@^19.2.5
+28 silly packumentCache full:https://registry.npmjs.org/react cache-miss
+29 http cache https://registry.npmjs.org/react 54ms (cache hit)
+30 silly packumentCache full:https://registry.npmjs.org/react set size:6609926 disposed:false
+31 verbose stack Error: unable to resolve dependency tree
+31 verbose stack     at #failPeerConflict (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:1415:25)
+31 verbose stack     at #loadPeerSet (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:1408:29)
+31 verbose stack     at async #loadPeerSet (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:1360:23)
+31 verbose stack     at async #buildDepStep (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:917:11)
+31 verbose stack     at async Arborist.buildIdealTree (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:170:7)
+31 verbose stack     at async Promise.all (index 1)
+31 verbose stack     at async Arborist.reify (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:110:5)
+31 verbose stack     at async Install.exec (/usr/local/lib/node_modules/npm/lib/commands/install.js:152:5)
+31 verbose stack     at async Npm.exec (/usr/local/lib/node_modules/npm/lib/npm.js:209:9)
+31 verbose stack     at async module.exports (/usr/local/lib/node_modules/npm/lib/cli/entry.js:67:5)
+32 error code ERESOLVE
+33 error ERESOLVE unable to resolve dependency tree
+34 error
+35 error While resolving: magic-the-practicing-app@1.0.0
+35 error Found: react@19.1.0[2m[22m
+35 error [2mnode_modules/react[22m
+35 error   react@"19.1.0" from the root project
+35 error   [95mpeer[39m react@"^18.0.0 || ^19.0.0" from react-native-web@0.21.2[2m[22m
+35 error   [2mnode_modules/react-native-web[22m
+35 error     react-native-web@"*" from the root project
+35 error
+35 error Could not resolve dependency:
+35 error [95mpeer[39m react@"^19.2.5" from react-dom@19.2.5[2m[22m
+35 error [2mnode_modules/react-dom[22m
+35 error   react-dom@"*" from the root project
+35 error   [95mpeer[39m react-dom@"^18.0.0 || ^19.0.0" from react-native-web@0.21.2[2m[22m
+35 error   [2mnode_modules/react-native-web[22m
+35 error     react-native-web@"*" from the root project
+35 error
+35 error Fix the upstream dependency conflict, or retry
+35 error this command with --force or --legacy-peer-deps
+35 error to accept an incorrect (and potentially broken) dependency resolution.
+36 error
+36 error
+36 error For a full report see:
+36 error /Users/andrewmarkschaffer/App Development/magic-the-practicing-app/.npm-cache/_logs/2026-04-17T13_09_39_253Z-eresolve-report.txt
+37 silly unfinished npm timer reify 1776431379761
+38 silly unfinished npm timer reify:loadTrees 1776431379762
+39 silly unfinished npm timer idealTree:buildDeps 1776431380169
+40 silly unfinished npm timer idealTree:#root 1776431380170
+41 verbose cwd /Users/andrewmarkschaffer/App Development/magic-the-practicing-app
+42 verbose os Darwin 23.6.0
+43 verbose node v24.14.1
+44 verbose npm  v11.11.0
+45 verbose exit 1
+46 verbose code 1
+47 error A complete log of this run can be found in: /Users/andrewmarkschaffer/App Development/magic-the-practicing-app/.npm-cache/_logs/2026-04-17T13_09_39_253Z-debug-0.log

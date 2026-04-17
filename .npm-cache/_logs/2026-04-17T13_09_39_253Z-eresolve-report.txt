@@ -1,0 +1,24 @@
+'Log files:
+/Users/andrewmarkschaffer/App Development/magic-the-practicing-app/.npm-cache/_logs/2026-04-17T13_09_39_253Z-debug-0.log
+
+# npm resolution error report
+
+While resolving: magic-the-practicing-app@1.0.0
+Found: react@19.1.0
+node_modules/react
+  react@"19.1.0" from the root project
+  peer react@"^18.0.0 || ^19.0.0" from react-native-web@0.21.2
+  node_modules/react-native-web
+    react-native-web@"*" from the root project
+
+Could not resolve dependency:
+peer react@"^19.2.5" from react-dom@19.2.5
+node_modules/react-dom
+  react-dom@"*" from the root project
+  peer react-dom@"^18.0.0 || ^19.0.0" from react-native-web@0.21.2
+  node_modules/react-native-web
+    react-native-web@"*" from the root project
+
+Fix the upstream dependency conflict, or retry
+this command with --force or --legacy-peer-deps
+to accept an incorrect (and potentially broken) dependency resolution.

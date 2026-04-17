@@ -140,22 +140,26 @@ export default function BuilderView() {
   };
 
   const deleteDeck = async (id) => {
-    Alert.alert('Delete Deck', 'Are you sure you want to delete this deck?', [
-      { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'Delete', 
-        style: 'destructive',
-        onPress: async () => {
-          const updatedDecks = await StorageService.deleteDeck(id);
-          if (updatedDecks) {
-            setDecks(updatedDecks);
-            if (currentDeckId === id) {
-              setCurrentDeckId(updatedDecks[0]?.id || null);
-            }
-          }
+    const performDelete = async () => {
+      const updatedDecks = await StorageService.deleteDeck(id);
+      if (updatedDecks) {
+        setDecks(updatedDecks);
+        if (currentDeckId === id) {
+          setCurrentDeckId(updatedDecks[0]?.id || null);
         }
       }
-    ]);
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to delete this deck?')) {
+        performDelete();
+      }
+    } else {
+      Alert.alert('Delete Deck', 'Are you sure you want to delete this deck?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: performDelete }
+      ]);
+    }
   };
 
   const selectMetagameCommander = async (card) => {

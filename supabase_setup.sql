@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS decks (
   user_id UUID REFERENCES auth.users(id),
   name TEXT NOT NULL,
   cards JSONB DEFAULT '[]'::jsonb,
+  commander JSONB DEFAULT NULL,
+  maybeCards JSONB DEFAULT '[]'::jsonb,
+  removedHistory JSONB DEFAULT '[]'::jsonb,
+  notes TEXT DEFAULT '',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

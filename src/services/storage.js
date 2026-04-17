@@ -48,7 +48,17 @@ export const StorageService = {
 
       const { data, error } = await supabase
         .from('decks')
-        .upsert(decks.map(d => ({ ...d, user_id: user.id })), { onConflict: 'id' });
+        .upsert(decks.map(deck => ({ 
+          id: deck.id,
+          user_id: user.id,
+          name: deck.name,
+          cards: deck.cards || [],
+          commander: deck.commander || null,
+          maybeCards: deck.maybeCards || [],
+          removedHistory: deck.removedHistory || [],
+          notes: deck.notes || '',
+          updated_at: new Date().toISOString()
+        })), { onConflict: 'id' });
       
       if (error) {
         console.error('Supabase Upsert Error Status:', error.status);

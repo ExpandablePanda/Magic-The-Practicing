@@ -540,6 +540,7 @@ export default function PlayView() {
         card.isTapped && styles.tappedCard
       ]}>
         <TouchableOpacity 
+          style={{ width: '100%', height: '100%' }}
           onPress={() => {
             if (isTargeting) applyCounters(card.instanceId);
             else if (isEditing) setActiveActionId(null);

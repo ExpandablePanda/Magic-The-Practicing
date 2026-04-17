@@ -599,15 +599,17 @@ export default function BuilderView() {
 
   return (
     <View style={styles.container}>
-      {/* Sticky Navigation Bar - Only for Builder/Editor views */}
-      {viewMode !== 'decks' && (
-        <View style={styles.navHeaderGroup}>
-          <View style={[styles.premiumHeader, styles.builderHeader]}>
+      {/* Navigation Header Group - Unified Sticky Bar for ALL modes */}
+      <View style={styles.navHeaderGroup}>
+        <View style={[styles.premiumHeader, styles.builderHeader]}>
+          {viewMode !== 'decks' && (
             <TouchableOpacity onPress={goBackToDecks} style={styles.backButton}>
               <ArrowLeft color="#b30000" size={24} />
             </TouchableOpacity>
+          )}
 
-            {currentDeck.commander ? (
+          {viewMode !== 'decks' && (
+            currentDeck.commander ? (
               <Image 
                 source={{ uri: ScryfallService.getImageUrl(currentDeck.commander, 'small') }} 
                 style={[styles.deckThumb, { marginRight: 15 }]} 
@@ -617,15 +619,15 @@ export default function BuilderView() {
              <View style={[styles.deckThumbPlaceholder, { marginRight: 15 }]}>
               <LayoutGrid color="#ccc" size={18} />
             </View>
-          )}
+          ))}
 
           <View style={styles.headerTitleGroup}>
-            <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING {currentDeckId ? `- ${currentDeck.cards.length + (currentDeck.commander ? 1 : 0)} CARDS` : ''}</Text>
+            <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING {currentDeckId && viewMode !== 'decks' ? `- ${currentDeck.cards.length + (currentDeck.commander ? 1 : 0)} CARDS` : ''}</Text>
             <Text style={styles.mainTitle} numberOfLines={1}>
-              {currentDeck.name || 'DECK BUILDER'}
+              {viewMode === 'decks' ? 'MY DECKS' : (currentDeck.name || 'DECK BUILDER')}
             </Text>
           </View>
-          {currentDeckId && (
+          {currentDeckId && viewMode !== 'decks' && (
             <TouchableOpacity 
               style={[styles.compactSaveBtn, saved && styles.savedBtn]} 
               onPress={saveAll}
@@ -635,54 +637,55 @@ export default function BuilderView() {
           )}
         </View>
 
-        <View style={styles.chipBarContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipBar} contentContainerStyle={styles.chipContent}>
-            <TouchableOpacity 
-              style={[styles.chip, viewMode === 'deck' && styles.activeChip]} 
-              onPress={() => setViewMode('deck')}
-            >
-              <Text style={[styles.chipText, viewMode === 'deck' && styles.activeChipText]}>Cards</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.chip, viewMode === 'search' && styles.activeChip]} 
-              onPress={() => setViewMode('search')}
-            >
-              <Text style={[styles.chipText, viewMode === 'search' && styles.activeChipText]}>Search</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.chip, viewMode === 'import' && styles.activeChip]} 
-              onPress={() => setViewMode('import')}
-            >
-              <Text style={[styles.chipText, viewMode === 'import' && styles.activeChipText]}>Import</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.chip, viewMode === 'maybe' && styles.activeChip]} 
-              onPress={() => setViewMode('maybe')}
-            >
-              <Text style={[styles.chipText, viewMode === 'maybe' && styles.activeChipText]}>Maybe</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.chip, viewMode === 'history' && styles.activeChip]} 
-              onPress={() => setViewMode('history')}
-            >
-              <Text style={[styles.chipText, viewMode === 'history' && styles.activeChipText]}>History</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.chip, viewMode === 'collection' && styles.activeChip]} 
-              onPress={() => setViewMode('collection')}
-            >
-              <Text style={[styles.chipText, viewMode === 'collection' && styles.activeChipText]}>Collection</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.chip, viewMode === 'metagame' && styles.activeChip]} 
-              onPress={() => setViewMode('metagame')}
-            >
-              <Text style={[styles.chipText, viewMode === 'metagame' && styles.activeChipText]}>Metagame</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
+        {viewMode !== 'decks' && (
+          <View style={styles.chipBarContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipBar} contentContainerStyle={styles.chipContent}>
+              <TouchableOpacity 
+                style={[styles.chip, viewMode === 'deck' && styles.activeChip]} 
+                onPress={() => setViewMode('deck')}
+              >
+                <Text style={[styles.chipText, viewMode === 'deck' && styles.activeChipText]}>Cards</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.chip, viewMode === 'search' && styles.activeChip]} 
+                onPress={() => setViewMode('search')}
+              >
+                <Text style={[styles.chipText, viewMode === 'search' && styles.activeChipText]}>Search</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.chip, viewMode === 'import' && styles.activeChip]} 
+                onPress={() => setViewMode('import')}
+              >
+                <Text style={[styles.chipText, viewMode === 'import' && styles.activeChipText]}>Import</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.chip, viewMode === 'maybe' && styles.activeChip]} 
+                onPress={() => setViewMode('maybe')}
+              >
+                <Text style={[styles.chipText, viewMode === 'maybe' && styles.activeChipText]}>Maybe</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.chip, viewMode === 'history' && styles.activeChip]} 
+                onPress={() => setViewMode('history')}
+              >
+                <Text style={[styles.chipText, viewMode === 'history' && styles.activeChipText]}>History</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.chip, viewMode === 'collection' && styles.activeChip]} 
+                onPress={() => setViewMode('collection')}
+              >
+                <Text style={[styles.chipText, viewMode === 'collection' && styles.activeChipText]}>Collection</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.chip, viewMode === 'metagame' && styles.activeChip]} 
+                onPress={() => setViewMode('metagame')}
+              >
+                <Text style={[styles.chipText, viewMode === 'metagame' && styles.activeChipText]}>Metagame</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
       </View>
-    )}
 
       {(viewMode === 'deck' || viewMode === 'maybe' || viewMode === 'history' || viewMode === 'collection') && (
         <FlatList
@@ -749,14 +752,9 @@ export default function BuilderView() {
 
       {viewMode === 'decks' && (
         <View style={styles.deckListContainer}>
-          <View style={styles.dashboardHeader}>
-            <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING</Text>
-            <Text style={styles.mainTitle}>MY DECKS</Text>
-          </View>
           <FlatList
             data={decks}
-            key={Platform.OS === 'web' ? 'grid' : 'list'}
-            numColumns={Platform.OS === 'web' ? 2 : 1}
+            numColumns={1}
             keyExtractor={item => item.id}
             renderItem={renderDeckItem}
             ListEmptyComponent={<Text style={styles.emptyText}>No decks found. Create one!</Text>}
@@ -1041,6 +1039,7 @@ const styles = StyleSheet.create({
   },
   deckListContainer: {
     flex: 1,
+    paddingTop: Platform.OS === 'web' ? 30 : 15,
   },
   createBtnWebContainer: {
     backgroundColor: '#fff',

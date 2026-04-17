@@ -7,8 +7,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build": "expo export --platform web",
-    "deploy": "npm run build && netlify deploy --dir=dist --prod"
+    "build": "expo export -p web",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist --nojekyll"
   },
   "dependencies": {
     "@expo/metro-runtime": "^55.0.9",
@@ -26,7 +27,8 @@
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.26.0"
+    "@babel/core": "^7.26.0",
+    "gh-pages": "^6.3.0"
   },
   "private": true
 }

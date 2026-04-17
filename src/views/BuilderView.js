@@ -146,11 +146,12 @@ export default function BuilderView() {
         text: 'Delete', 
         style: 'destructive',
         onPress: async () => {
-          const updatedDecks = decks.filter(d => d.id !== id);
-          setDecks(updatedDecks);
-          await StorageService.saveDecks(updatedDecks);
-          if (currentDeckId === id) {
-            setCurrentDeckId(updatedDecks[0]?.id || null);
+          const updatedDecks = await StorageService.deleteDeck(id);
+          if (updatedDecks) {
+            setDecks(updatedDecks);
+            if (currentDeckId === id) {
+              setCurrentDeckId(updatedDecks[0]?.id || null);
+            }
           }
         }
       }

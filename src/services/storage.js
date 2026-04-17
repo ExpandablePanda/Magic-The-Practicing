@@ -155,6 +155,25 @@ export const StorageService = {
     }
   },
 
+  async deleteDeck(id) {
+    try {
+      // 1. Update local state
+      const decks = await this.getDecks();
+      const filtered = decks.filter(d => d.id !== id);
+      await AsyncStorage.setItem(KEYS.DECKS_LIST, JSON.stringify(filtered));
+
+      // 2. Clear from Cloud if logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && isUUID(id)) {
+        await supabase.from('decks').delete().eq('id', id).eq('user_id', user.id);
+      }
+      return filtered;
+    } catch (e) {
+      console.error('Delete Deck Error:', e);
+      return null;
+    }
+  },
+
   async setCurrentDeckId(id) {
     try {
       await AsyncStorage.setItem(KEYS.CURRENT_DECK_ID, id);

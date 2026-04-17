@@ -13,7 +13,7 @@ import ScoreView from './src/views/ScoreView';
 import StatsView from './src/views/StatsView';
 import WebShell from './src/components/WebShell';
 
-const APP_VERSION = 'V1.3.3';
+const APP_VERSION = 'V1.3.4';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('landing');

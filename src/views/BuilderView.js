@@ -692,6 +692,7 @@ export default function BuilderView() {
 
       {(viewMode === 'deck' || viewMode === 'maybe' || viewMode === 'history' || viewMode === 'collection') && (
         <FlatList
+          style={{ width: '100%' }}
           data={getDataForCurrentView()}
           keyExtractor={(section, index) => section.title + index}
           renderItem={({ item: section }) => (
@@ -746,7 +747,7 @@ export default function BuilderView() {
           )}
           ListEmptyComponent={<Text style={styles.emptyText}>No cards in deck yet.</Text>}
           contentContainerStyle={styles.listContent}
-          style={styles.flex1}
+          style={[styles.flex1, { width: '100%' }]}
         />
       )}
 
@@ -778,7 +779,7 @@ export default function BuilderView() {
             renderItem={renderCardItem}
             ListEmptyComponent={!loading && <Text style={styles.emptyText}>Search for cards...</Text>}
             contentContainerStyle={styles.listContent}
-            style={styles.flex1}
+            style={[styles.flex1, { width: '100%' }]}
           />
         </>
       )}
@@ -1017,9 +1018,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 15,
     backgroundColor: '#fff',
-    maxWidth: 680,
     width: '100%',
-    alignSelf: 'center',
   },
   navHeaderGroup: {
     backgroundColor: '#fff',
@@ -1480,6 +1479,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 40,
+    width: '100%',
   },
   modalOverlay: {
     flex: 1,

@@ -35,6 +35,7 @@ const BattlefieldCard = ({ card, onUpdatePT, onDelete }) => {
 export default function PlayView() {
   const [myLife, setMyLife] = useState(20);
   const [oppLife, setOppLife] = useState(20);
+  const [poisonCounters, setPoisonCounters] = useState(0);
   const [turnNumber, setTurnNumber] = useState(1);
   
   // Game Zones
@@ -58,6 +59,8 @@ export default function PlayView() {
   const [galleryCards, setGalleryCards] = useState([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [shuffleToast, setShuffleToast] = useState(false);
+  const [hasPlayedCardThisTurn, setHasPlayedCardThisTurn] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
   const [selectedHandId, setSelectedHandId] = useState(null);
   const [activeActionId, setActiveActionId] = useState(null);
   
@@ -138,6 +141,7 @@ export default function PlayView() {
     
     setMyLife(isEDH ? 40 : 20);
     setOppLife(isEDH ? 40 : 20);
+    setPoisonCounters(0);
     setViewMode('game');
   };
 
@@ -204,6 +208,15 @@ export default function PlayView() {
   };
 
   const nextTurn = () => {
+    const MAX_HAND = 7;
+    if (hand.length > MAX_HAND) {
+      Alert.alert(
+        'Too Many Cards',
+        `You have ${hand.length} cards in hand. Discard down to ${MAX_HAND} before ending your turn.\n\nIf a card lets you hold more than 7, long-press it in your hand to discard others first.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     pushHistory();
     setTurnNumber(prev => prev + 1);
     
@@ -219,6 +232,7 @@ export default function PlayView() {
     });
     
     setLandsPlayedThisTurn(0);
+    setHasPlayedCardThisTurn(false);
     drawCard();
     Alert.alert('Turn Reset', `Starting Turn ${turnNumber + 1}. All cards untapped & temporary effects removed.`);
   };
@@ -372,15 +386,15 @@ export default function PlayView() {
 
     pushHistory();
     setHand(prev => prev.filter(c => c.instanceId !== card.instanceId));
-    setBattlefield(prev => [{ 
-      ...card, 
-      hasSickness: !card.type_line?.includes('Land') 
+    setBattlefield(prev => [{
+      ...card,
+      hasSickness: !card.type_line?.includes('Land')
     }, ...prev]);
 
     if (card.type_line?.includes('Land')) {
       setLandsPlayedThisTurn(prev => prev + 1);
     }
-    
+    setHasPlayedCardThisTurn(true);
     setSelectedHandId(null);
   };
 
@@ -449,6 +463,7 @@ export default function PlayView() {
     
     setBattlefield(prev => [readyCard, ...prev]);
     setCommanderTax(prev => prev + 1);
+    setHasPlayedCardThisTurn(true);
   };
 
   const openGallery = (pool, initialCard) => {
@@ -731,7 +746,8 @@ export default function PlayView() {
       exile: [...exile],
       landsPlayedThisTurn,
       commanderTax,
-      turnNumber
+      turnNumber,
+      poisonCounters,
     };
     setHistory(prev => [snapshot, ...prev].slice(0, 20)); // Keep last 20 steps
   };
@@ -750,6 +766,7 @@ export default function PlayView() {
     setLandsPlayedThisTurn(last.landsPlayedThisTurn);
     setCommanderTax(last.commanderTax);
     setTurnNumber(last.turnNumber || 1);
+    setPoisonCounters(last.poisonCounters ?? 0);
     setHistory(rest);
   };
 
@@ -981,6 +998,7 @@ export default function PlayView() {
     const isEDH = !!fullDeckData.commander;
     setMyLife(isEDH ? 40 : 20);
     setOppLife(isEDH ? 40 : 20);
+    setPoisonCounters(0);
     setBattlefield([]);
     setLandsPlayedThisTurn(0);
     setCommanderTax(0);
@@ -1070,7 +1088,7 @@ export default function PlayView() {
                 <Text style={styles.undoText}>UNDO</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={[styles.resetButton, !fullDeckData && { opacity: 0.3 }]} disabled={!fullDeckData} onPress={() => selectDeck(fullDeckData)}>
+            <TouchableOpacity style={[styles.resetButton, !fullDeckData && { opacity: 0.3 }]} disabled={!fullDeckData} onPress={() => { if (turnNumber > 1) setShowResultModal(true); else selectDeck(fullDeckData); }}>
               <RefreshCcw color="#b30000" size={20} />
             </TouchableOpacity>
           </View>
@@ -1199,7 +1217,7 @@ export default function PlayView() {
                 <Text style={styles.shuffleToastText}>🔀 Library Shuffled</Text>
               </View>
             )}
-            {mulliganCount > 0 && !bottomingState && (
+            {mulliganCount > 0 && !bottomingState && !hasPlayedCardThisTurn && (
               <View style={styles.mulliganChip}>
                 <Text style={styles.mulliganChipLabel}>MULLIGAN {mulliganCount}×</Text>
                 <TouchableOpacity style={styles.mulliganChipBtn} onPress={() => setShowMulliganModal(true)}>
@@ -1267,24 +1285,60 @@ export default function PlayView() {
                     <RefreshCcw color="#b30000" size={10} />
                     <Text style={styles.sortBtnText}>SORT</Text>
                   </TouchableOpacity>
-                  {turnNumber === 1 && hand.length > 0 && (
+                  {turnNumber === 1 && hand.length > 0 && !hasPlayedCardThisTurn && (
                     <TouchableOpacity onPress={() => setShowMulliganModal(true)} style={[styles.sortBtn, { borderColor: '#ffd700' }]}>
                       <RefreshCcw color="#ffd700" size={10} />
                       <Text style={[styles.sortBtnText, { color: '#ffd700' }]}>MULLIGAN</Text>
                     </TouchableOpacity>
                   )}
                 </View>
+                {turnNumber === 1 && hand.length >= 5 && (() => {
+                  const lands = hand.filter(c => c.type_line?.includes('Land')).length;
+                  const spells = hand.length - lands;
+                  const avgCmc = spells > 0
+                    ? (hand.filter(c => !c.type_line?.includes('Land')).reduce((s, c) => s + (c.cmc || 0), 0) / spells).toFixed(1)
+                    : 0;
+                  let label, color;
+                  if (lands < 2) { label = `⚠ Flood risk — ${lands} land`; color = '#b30000'; }
+                  else if (lands > 4) { label = `⚠ Mana flood — ${lands} lands`; color = '#b30000'; }
+                  else if (parseFloat(avgCmc) > 4) { label = `😬 Heavy hand — avg ${avgCmc} CMC`; color = '#ff8f00'; }
+                  else if (lands === 2 && parseFloat(avgCmc) <= 3) { label = `✓ Fast hand — ${lands} lands, ${avgCmc} avg`; color = '#2d8a4e'; }
+                  else { label = `✓ Keepable — ${lands} lands, ${avgCmc} avg CMC`; color = '#2d8a4e'; }
+                  return <Text style={[styles.handScore, { color }]}>{label}</Text>;
+                })()}
                 {selectedHandId && <Text style={styles.instructionText}>TAP BATTLEFIELD TO PLACE</Text>}
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.handList}>
                 {hand.map((card, index) => (
-                  <TouchableOpacity 
-                    key={card.instanceId} 
-                    onPress={() => selectFromHand(card.instanceId)} 
-                    onLongPress={() => openGallery(hand, card)}
-                    style={[styles.handCardWrapper, selectedHandId === card.instanceId && styles.selectedHandCard]}
+                  <TouchableOpacity
+                    key={card.instanceId}
+                    onPress={() => selectFromHand(card.instanceId)}
+                    onLongPress={() => {
+                      if (hand.length > 7) {
+                        Alert.alert(
+                          `Discard ${card.name}?`,
+                          'Send this card to the graveyard to reduce hand size.',
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Discard', style: 'destructive', onPress: () => {
+                              pushHistory();
+                              setHand(prev => prev.filter(c => c.instanceId !== card.instanceId));
+                              setGraveyard(prev => [card, ...prev]);
+                            }},
+                          ]
+                        );
+                      } else {
+                        openGallery(hand, card);
+                      }
+                    }}
+                    style={[styles.handCardWrapper, selectedHandId === card.instanceId && styles.selectedHandCard, hand.length > 7 && styles.discardableCard]}
                   >
                     <Image source={{ uri: ScryfallService.getImageUrl(card, 'small') }} style={styles.handCard} resizeMode="contain" />
+                    {hand.length > 7 && (
+                      <View style={styles.discardBadge}>
+                        <Text style={styles.discardBadgeText}>HOLD</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -1292,15 +1346,23 @@ export default function PlayView() {
 
             {/* Action Bar */}
             <View style={styles.actionBar}>
-              <TouchableOpacity 
-                style={[styles.floatingCounterBtn, isTargeting && styles.activeCounterBtn]} 
+              <TouchableOpacity
+                style={[styles.floatingCounterBtn, history.length === 0 && { opacity: 0.3 }]}
+                onPress={undo}
+                disabled={history.length === 0}
+              >
+                <RotateCcw color="#b30000" size={24} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.floatingCounterBtn, isTargeting && styles.activeCounterBtn]}
                 onPress={() => setShowCounterModal(true)}
               >
                 <Layers color={isTargeting ? "#fff" : "#b30000"} size={24} />
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={styles.floatingCounterBtn} 
+              <TouchableOpacity
+                style={styles.floatingCounterBtn}
                 onPress={() => {
                   setTokenQuantity(1);
                   setShowTokenModal(true);
@@ -1321,6 +1383,30 @@ export default function PlayView() {
                   <Text style={styles.playerLifeText}>{myLife}</Text>
                 </View>
                 <TouchableOpacity onPress={() => setMyLife(prev => prev + 1)}><Plus color="#fff" size={24} /></TouchableOpacity>
+              </View>
+
+              <View style={styles.poisonDisplay}>
+                <TouchableOpacity onPress={() => setPoisonCounters(prev => {
+                  const next = Math.max(0, prev - 1);
+                  return next;
+                })}>
+                  <Minus color={poisonCounters >= 10 ? '#fff' : '#2d8a4e'} size={18} />
+                </TouchableOpacity>
+                <View style={styles.poisonCircle}>
+                  <Text style={styles.poisonIcon}>☠</Text>
+                  <Text style={[styles.poisonText, poisonCounters >= 10 && styles.poisonTextDanger]}>{poisonCounters}</Text>
+                </View>
+                <TouchableOpacity onPress={() => {
+                  setPoisonCounters(prev => {
+                    const next = prev + 1;
+                    if (next >= 10) {
+                      setTimeout(() => Alert.alert('💀 Poisoned Out', 'You have 10 poison counters. You lose!'), 100);
+                    }
+                    return next;
+                  });
+                }}>
+                  <Plus color={poisonCounters >= 10 ? '#fff' : '#2d8a4e'} size={18} />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -1551,13 +1637,20 @@ export default function PlayView() {
               <Text style={styles.menuItemText}>Search Library</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={() => { 
-                Alert.prompt('Mill', 'How many cards to mill?', (count) => {
-                  millCards(parseInt(count) || 1);
-                });
-                setShowLibraryMenu(false); 
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setShowLibraryMenu(false);
+                if (Platform.OS === 'web') {
+                  const raw = window.prompt('How many cards to mill?', '1');
+                  const count = parseInt(raw);
+                  if (!isNaN(count) && count > 0) millCards(count);
+                } else {
+                  Alert.prompt('Mill', 'How many cards to mill?', (raw) => {
+                    const count = parseInt(raw);
+                    if (!isNaN(count) && count > 0) millCards(count);
+                  });
+                }
               }}
             >
               <Trash2 color="#333" size={24} />
@@ -1672,6 +1765,42 @@ export default function PlayView() {
           </Pressable>
           </KeyboardAvoidingView>
         </Pressable>
+      </Modal>
+
+      {/* End-of-Game Result Modal */}
+      <Modal visible={showResultModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.resultModal}>
+            <Text style={styles.resultTitle}>LOG RESULT</Text>
+            <Text style={styles.resultSubtitle}>Turn {turnNumber} · {fullDeckData?.name}</Text>
+            <TouchableOpacity
+              style={[styles.resultBtn, { backgroundColor: '#2d8a4e' }]}
+              onPress={async () => {
+                if (fullDeckData?.id) await StorageService.recordResult(fullDeckData.id, 'win');
+                setShowResultModal(false);
+                selectDeck(fullDeckData);
+              }}
+            >
+              <Text style={styles.resultBtnText}>🏆  WIN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.resultBtn, { backgroundColor: '#b30000' }]}
+              onPress={async () => {
+                if (fullDeckData?.id) await StorageService.recordResult(fullDeckData.id, 'loss');
+                setShowResultModal(false);
+                selectDeck(fullDeckData);
+              }}
+            >
+              <Text style={styles.resultBtnText}>💀  LOSS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.resultSkip}
+              onPress={() => { setShowResultModal(false); selectDeck(fullDeckData); }}
+            >
+              <Text style={styles.resultSkipText}>Skip</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       {/* Zone Inventory Modal (Graveyard/Exile) */}
@@ -2541,6 +2670,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 10,
   },
+  discardableCard: {
+    borderWidth: 2,
+    borderColor: '#ff8f00',
+    borderRadius: 6,
+  },
+  discardBadge: {
+    position: 'absolute',
+    bottom: 4,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  discardBadgeText: {
+    backgroundColor: 'rgba(255,143,0,0.85)',
+    color: '#fff',
+    fontSize: 7,
+    fontWeight: '900',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
   nextTurnBtn: {
     flex: 1,
     flexDirection: 'row',
@@ -2719,6 +2870,38 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
   },
+  handScore: {
+    fontSize: 10,
+    fontWeight: '700',
+    paddingHorizontal: 4,
+    paddingBottom: 2,
+  },
+  poisonDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f5e9',
+    height: 48,
+    borderRadius: 24,
+    paddingHorizontal: 10,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#2d8a4e',
+  },
+  poisonCircle: {
+    alignItems: 'center',
+    minWidth: 32,
+  },
+  poisonIcon: {
+    fontSize: 10,
+  },
+  poisonText: {
+    color: '#2d8a4e',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  poisonTextDanger: {
+    color: '#b30000',
+  },
   targetingBanner: {
     position: 'absolute',
     top: 100,
@@ -2879,6 +3062,50 @@ const styles = StyleSheet.create({
     marginTop: 20,
     opacity: 0.8,
     textAlign: 'center',
+  },
+  resultModal: {
+    backgroundColor: '#fff',
+    width: 300,
+    borderRadius: 20,
+    padding: 28,
+    alignItems: 'center',
+    gap: 12,
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+  },
+  resultTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#1a1a1a',
+    letterSpacing: 2,
+  },
+  resultSubtitle: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 8,
+  },
+  resultBtn: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  resultBtnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  resultSkip: {
+    marginTop: 4,
+    padding: 8,
+  },
+  resultSkipText: {
+    color: '#999',
+    fontSize: 13,
   },
   notesContainer: {
     backgroundColor: '#fff8e1',

@@ -21,6 +21,8 @@ export default function BuilderView() {
   const [alternatePrints, setAlternatePrints] = useState([]);
   const [loadingPrints, setLoadingPrints] = useState(false);
   
+  const [deckStats, setDeckStats] = useState({});
+
   // Metagame State
   const [metaQuery, setMetaQuery] = useState('');
   const [metaSuggestions, setMetaSuggestions] = useState([]);
@@ -40,6 +42,8 @@ export default function BuilderView() {
       const allDecks = cloudDecks ?? await StorageService.getDecks();
       const lastId = await StorageService.getCurrentDeckId();
       setDecks(allDecks);
+      const stats = await StorageService.getStats();
+      setDeckStats(stats);
       if (lastId && allDecks.find(d => d.id === lastId)) {
         setCurrentDeckId(lastId);
       } else if (allDecks.length > 0) {
@@ -542,29 +546,39 @@ export default function BuilderView() {
     }
   };
 
-  const renderCardItem = ({ item, isCommander = false }) => (
-    <View style={[styles.cardItem, isCommander && styles.commanderItem]}>
-      <TouchableOpacity onPress={() => setPreviewCard(item)} onLongPress={() => setPreviewCard(item)}>
-        <Image source={{ uri: ScryfallService.getImageUrl(item, 'small') }} style={styles.cardThumb} resizeMode="contain" />
-      </TouchableOpacity>
-      <TouchableOpacity 
-        style={styles.cardInfo} 
-        onPress={() => setPreviewCard(item)} 
-        onLongPress={() => setPreviewCard(item)}
-      >
-        <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.cardType} numberOfLines={1}>{item.type_line}</Text>
-      </TouchableOpacity>
-      <View style={styles.cardActions}>
-        <TouchableOpacity 
-          style={viewMode === 'search' ? styles.addButton : styles.removeButton} 
-          onPress={() => viewMode === 'search' ? addToDeck(item, isAddingCommander) : removeFromDeck(item.instanceId, isCommander)}
-        >
-          {viewMode === 'search' ? <Plus color="#fff" size={20} /> : <Text style={styles.removeIcon}>×</Text>}
+  const renderCardItem = ({ item, isCommander = false }) => {
+    const price = item.prices?.usd ? `$${parseFloat(item.prices.usd).toFixed(2)}` : null;
+    const isIllegal = item.legalities?.commander === 'not_legal' || item.legalities?.commander === 'banned';
+    return (
+      <View style={[styles.cardItem, isCommander && styles.commanderItem]}>
+        <TouchableOpacity onPress={() => setPreviewCard(item)} onLongPress={() => setPreviewCard(item)}>
+          <Image source={{ uri: ScryfallService.getImageUrl(item, 'small') }} style={styles.cardThumb} resizeMode="contain" />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.cardInfo}
+          onPress={() => setPreviewCard(item)}
+          onLongPress={() => setPreviewCard(item)}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
+            {isIllegal && <View style={styles.illegalBadge}><Text style={styles.illegalBadgeText}>ILLEGAL</Text></View>}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.cardType} numberOfLines={1}>{item.type_line}</Text>
+            {price && <Text style={styles.cardPrice}>{price}</Text>}
+          </View>
+        </TouchableOpacity>
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={viewMode === 'search' ? styles.addButton : styles.removeButton}
+            onPress={() => viewMode === 'search' ? addToDeck(item, isAddingCommander) : removeFromDeck(item.instanceId, isCommander)}
+          >
+            {viewMode === 'search' ? <Plus color="#fff" size={20} /> : <Text style={styles.removeIcon}>×</Text>}
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderDeckItem = ({ item }) => (
     <TouchableOpacity style={[styles.deckItem, currentDeckId === item.id && styles.activeDeckItem]} onPress={() => selectDeck(item.id)}>
@@ -582,7 +596,14 @@ export default function BuilderView() {
         )}
         <View style={styles.deckInfo}>
           <Text style={styles.deckName}>{item.name}</Text>
-          <Text style={styles.deckCount}>{(item.cards?.length || 0) + (item.commander ? 1 : 0)} cards</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+            <Text style={styles.deckCount}>{(item.cards?.length || 0) + (item.commander ? 1 : 0)} cards</Text>
+            {deckStats[item.id] && (
+              <Text style={styles.deckRecord}>
+                {deckStats[item.id].wins}W – {deckStats[item.id].losses}L
+              </Text>
+            )}
+          </View>
         </View>
       </View>
       <View style={styles.miniDeleteContainer}>
@@ -638,9 +659,30 @@ export default function BuilderView() {
               <Text style={[styles.brandSubtitle, { marginBottom: 0 }]}>MY DECKS</Text>
             </TouchableOpacity>
             <Text style={styles.mainTitle}>{currentDeck.name || 'DECK BUILDER'}</Text>
-            <Text style={[styles.brandSubtitle, { marginTop: 4, color: '#999' }]}>
-              {currentDeck.cards.length + (currentDeck.commander ? 1 : 0)} CARDS
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
+              <Text style={[styles.brandSubtitle, { color: '#999', marginBottom: 0 }]}>
+                {currentDeck.cards.length + (currentDeck.commander ? 1 : 0)} CARDS
+              </Text>
+              {(() => {
+                const allCards = [...(currentDeck.cards || []), ...(currentDeck.commander ? [currentDeck.commander] : [])];
+                const total = allCards.reduce((sum, c) => sum + (parseFloat(c.prices?.usd) || 0), 0);
+                return total > 0 ? (
+                  <Text style={[styles.brandSubtitle, { color: '#2d8a4e', marginBottom: 0 }]}>${total.toFixed(2)}</Text>
+                ) : null;
+              })()}
+              {(() => {
+                const allCards = [...(currentDeck.cards || []), ...(currentDeck.commander ? [currentDeck.commander] : [])];
+                const illegalCount = allCards.filter(c => c.legalities?.commander === 'not_legal' || c.legalities?.commander === 'banned').length;
+                return illegalCount > 0 ? (
+                  <View style={styles.illegalBadge}><Text style={styles.illegalBadgeText}>{illegalCount} ILLEGAL</Text></View>
+                ) : null;
+              })()}
+              {deckStats[currentDeck.id] && (
+                <Text style={[styles.brandSubtitle, { color: '#666', marginBottom: 0 }]}>
+                  {deckStats[currentDeck.id].wins}W–{deckStats[currentDeck.id].losses}L
+                </Text>
+              )}
+            </View>
           </View>
 
           <View style={styles.chipBarContainer}>
@@ -686,21 +728,44 @@ export default function BuilderView() {
               </View>
             )}
             ListHeaderComponent={
-              viewMode === 'deck' && (
-                <>
-                  {currentDeck.commander ? (
-                    <View style={styles.typeSection}>
-                      <Text style={styles.sectionTitle}>COMMANDER</Text>
-                      {renderCardItem({ item: currentDeck.commander, isCommander: true })}
-                    </View>
-                  ) : (
-                    <TouchableOpacity style={styles.bigAddCommanderBtn} onPress={() => setViewMode('search')}>
-                       <UserPlus color="#856404" size={24} />
-                       <Text style={styles.bigAddCommanderText}>Add Commander</Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              )
+              viewMode === 'deck' && (() => {
+                const allSpells = currentDeck.cards.filter(c => !c.type_line?.includes('Land'));
+                const maxCmc = 7;
+                const buckets = Array.from({ length: maxCmc + 1 }, (_, i) => ({
+                  cmc: i < maxCmc ? i : `${maxCmc}+`,
+                  count: allSpells.filter(c => i < maxCmc ? Math.floor(c.cmc || 0) === i : (c.cmc || 0) >= maxCmc).length,
+                })).filter(b => b.count > 0 || typeof b.cmc === 'number');
+                const maxCount = Math.max(...buckets.map(b => b.count), 1);
+                return (
+                  <>
+                    {allSpells.length > 0 && (
+                      <View style={styles.curveContainer}>
+                        <Text style={styles.curveTitle}>MANA CURVE</Text>
+                        <View style={styles.curveChart}>
+                          {buckets.map((b, i) => (
+                            <View key={i} style={styles.curveCol}>
+                              <Text style={styles.curveCount}>{b.count > 0 ? b.count : ''}</Text>
+                              <View style={[styles.curveBar, { height: Math.max(4, (b.count / maxCount) * 60) }]} />
+                              <Text style={styles.curveCmc}>{b.cmc}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                    {currentDeck.commander ? (
+                      <View style={styles.typeSection}>
+                        <Text style={styles.sectionTitle}>COMMANDER</Text>
+                        {renderCardItem({ item: currentDeck.commander, isCommander: true })}
+                      </View>
+                    ) : (
+                      <TouchableOpacity style={styles.bigAddCommanderBtn} onPress={() => setViewMode('search')}>
+                        <UserPlus color="#856404" size={24} />
+                        <Text style={styles.bigAddCommanderText}>Add Commander</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                );
+              })()
             }
             ListFooterComponent={<View style={{ height: 100 }} />}
           />
@@ -1117,7 +1182,11 @@ const styles = StyleSheet.create({
   deckCount: {
     fontSize: 14,
     color: '#777',
-    marginTop: 4,
+  },
+  deckRecord: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2d8a4e',
   },
   miniDeleteContainer: {
     flexDirection: 'row',
@@ -1326,6 +1395,67 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#777',
     marginTop: 2,
+  },
+  cardPrice: {
+    fontSize: 11,
+    color: '#2d8a4e',
+    fontWeight: '700',
+  },
+  curveContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 0,
+    marginBottom: 8,
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  curveTitle: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#999',
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  curveChart: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 6,
+    height: 80,
+  },
+  curveCol: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  curveBar: {
+    width: '70%',
+    backgroundColor: '#b30000',
+    borderRadius: 3,
+    minWidth: 8,
+  },
+  curveCmc: {
+    fontSize: 9,
+    color: '#999',
+    marginTop: 3,
+    fontWeight: '700',
+  },
+  curveCount: {
+    fontSize: 9,
+    color: '#b30000',
+    fontWeight: '900',
+    marginBottom: 2,
+  },
+  illegalBadge: {
+    backgroundColor: '#b30000',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  illegalBadgeText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   addButton: {
     backgroundColor: '#b30000',

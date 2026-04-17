@@ -5,6 +5,7 @@ const KEYS = {
   DECKS_LIST: 'mtg_practicing_decks_list',
   CURRENT_DECK_ID: 'mtg_practicing_current_deck_id',
   GAME_STATE: 'mtg_practicing_game_state',
+  STATS: 'mtg_practicing_stats',
 };
 
 // Helper for UUID generation (RFC4122)
@@ -207,5 +208,27 @@ export const StorageService = {
     } catch (e) {
       console.error('Clear Game State Error:', e);
     }
-  }
+  },
+
+  async getStats() {
+    try {
+      const json = await AsyncStorage.getItem(KEYS.STATS);
+      return json ? JSON.parse(json) : {};
+    } catch (e) {
+      return {};
+    }
+  },
+
+  async recordResult(deckId, result) {
+    try {
+      const stats = await StorageService.getStats();
+      if (!stats[deckId]) stats[deckId] = { wins: 0, losses: 0, games: [] };
+      if (result === 'win') stats[deckId].wins++;
+      else stats[deckId].losses++;
+      stats[deckId].games.push({ result, date: new Date().toISOString() });
+      await AsyncStorage.setItem(KEYS.STATS, JSON.stringify(stats));
+    } catch (e) {
+      console.error('Record Result Error:', e);
+    }
+  },
 };

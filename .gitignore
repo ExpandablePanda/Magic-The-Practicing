@@ -8,3 +8,6 @@ yarn-error.log*
 .env
 .DS_Store
 *.local
+.npm-cache/
+.expo-shared/
+.cache/

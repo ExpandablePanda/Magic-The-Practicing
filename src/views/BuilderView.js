@@ -600,8 +600,13 @@ export default function BuilderView() {
     if (viewMode === 'deck') return getSectionedCards();
     if (viewMode === 'maybe') return [{ title: 'MAYBEBOARD', data: currentDeck.maybeCards || [] }];
     if (viewMode === 'history') return [{ title: 'RECENTLY REMOVED', data: currentDeck.removedHistory || [] }];
+    if (viewMode === 'collection') return [{ title: 'COLLECTION', data: getCollectionData() }];
+    return [];
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.indexContainer}>
       {viewMode === 'decks' && (
         <View style={styles.deckListContainer}>
           <View style={styles.header}>
@@ -965,6 +970,7 @@ export default function BuilderView() {
           </Pressable>
         </Pressable>
       </Modal>
+      </View>
     </View>
   );
 }

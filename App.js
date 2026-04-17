@@ -185,6 +185,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: Platform.OS === 'ios' ? 25 : 0,
     backgroundColor: '#fff',
+    paddingHorizontal: Platform.OS === 'web' ? '15%' : 0,
   },
   navItem: {
     alignItems: 'center',

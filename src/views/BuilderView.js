@@ -694,14 +694,15 @@ export default function BuilderView() {
 
       {(viewMode === 'deck' || viewMode === 'maybe' || viewMode === 'history' || viewMode === 'collection') && (
         <FlatList
-          style={{ width: '100%' }}
+          style={[styles.flex1, { width: '100%' }]}
           data={getDataForCurrentView()}
           keyExtractor={(section, index) => section.title + index}
           renderItem={({ item: section }) => (
             <View style={styles.typeSection}>
               <Text style={styles.sectionTitle}>{section.title} ({section.data.length})</Text>
+              <View style={Platform.OS === 'web' ? styles.gridWrap : null}>
               {section.data.map((card, cardIndex) => (
-                <View key={card.instanceId || cardIndex}>
+                <View key={card.instanceId || cardIndex} style={Platform.OS === 'web' ? styles.gridItem : null}>
                    <View style={styles.cardItemRow}>
                     {renderCardItem({ 
                       item: card, 
@@ -720,6 +721,7 @@ export default function BuilderView() {
                   </View>
                 </View>
               ))}
+              </View>
             </View>
           )}
           ListHeaderComponent={(
@@ -757,6 +759,8 @@ export default function BuilderView() {
         <View style={styles.deckListContainer}>
           <FlatList
             data={decks}
+            key={Platform.OS === 'web' ? 'grid' : 'list'}
+            numColumns={Platform.OS === 'web' ? 2 : 1}
             keyExtractor={item => item.id}
             renderItem={renderDeckItem}
             ListEmptyComponent={<Text style={styles.emptyText}>No decks found. Create one!</Text>}
@@ -777,6 +781,8 @@ export default function BuilderView() {
           </View>
           <FlatList
             data={results}
+            key={Platform.OS === 'web' ? 'results_grid' : 'results_list'}
+            numColumns={Platform.OS === 'web' ? 3 : 1}
             keyExtractor={(item, index) => `${item.id}-${index}`}
             renderItem={renderCardItem}
             ListEmptyComponent={!loading && <Text style={styles.emptyText}>Search for cards...</Text>}
@@ -1029,12 +1035,23 @@ const styles = StyleSheet.create({
     flex: 0,
     zIndex: 10,
     position: 'relative',
+    width: '100%',
+  },
+  gridWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 15,
+  },
+  gridItem: {
+    width: '48%',
+    minWidth: 300,
   },
   chipBarContainer: {
-    height: 48,
+    height: 60,
     flex: 0,
     marginTop: 0,
     marginBottom: 10,
+    paddingVertical: 5,
   },
   premiumHeader: {
     flexDirection: 'row',

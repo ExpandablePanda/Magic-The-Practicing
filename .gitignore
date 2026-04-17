@@ -11,3 +11,6 @@ yarn-error.log*
 .npm-cache/
 .expo-shared/
 .cache/
+
+# Local Netlify folder
+.netlify

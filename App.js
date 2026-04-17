@@ -12,7 +12,7 @@ import MetagameView from './src/views/MetagameView';
 import ScoreView from './src/views/ScoreView';
 import WebShell from './src/components/WebShell';
 
-const APP_VERSION = 'V.1.0.1';
+const APP_VERSION = 'V.1.0.2';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('landing');

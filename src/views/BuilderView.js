@@ -1025,6 +1025,8 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     marginBottom: 0,
     flex: 0,
+    zIndex: 10,
+    position: 'relative',
   },
   chipBarContainer: {
     height: 48,

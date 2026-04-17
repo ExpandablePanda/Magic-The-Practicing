@@ -8,7 +8,6 @@ import LandingView from './src/views/LandingView';
 import PlayView from './src/views/PlayView';
 import BuilderView from './src/views/BuilderView';
 import AuthView from './src/views/AuthView';
-import AuthView from './src/views/AuthView';
 import ScoreView from './src/views/ScoreView';
 import WebShell from './src/components/WebShell';
 

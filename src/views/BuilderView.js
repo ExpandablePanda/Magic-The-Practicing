@@ -737,7 +737,7 @@ export default function BuilderView() {
               placeholder="Paste ManaBox export text..."
               multiline
               value={importText}
-              onChangeText={importText}
+              onChangeText={setImportText}
             />
             <TouchableOpacity style={styles.importButton} onPress={importFromManaBox} disabled={isImporting}>
               {isImporting ? <ActivityIndicator color="#fff" /> : <Text style={styles.importButtonText}>Import Deck</Text>}
@@ -747,107 +747,126 @@ export default function BuilderView() {
       )}
 
       {viewMode === 'metagame' && (
-              {metaSuggestLoading && <ActivityIndicator size="small" color="#b30000" style={{ marginLeft: 8 }} />}
-            </View>
-
-            {showMetaSuggestions && metaSuggestions.length > 0 && (
-              <View style={metaStyles.suggestionList}>
-                {metaSuggestions.map((card, i) => (
-                  <TouchableOpacity
-                    key={card.id}
-                    style={[metaStyles.suggestionRow, i < metaSuggestions.length - 1 && metaStyles.suggestionBorder]}
-                    onPress={() => selectMetagameCommander(card)}
-                  >
-                    {ScryfallService.getImageUrl(card, 'small') ? (
-                      <Image
-                        source={{ uri: ScryfallService.getImageUrl(card, 'small') }}
-                        style={metaStyles.suggestionThumb}
-                        resizeMode="cover"
-                      />
-                    ) : null}
-                    <View style={metaStyles.suggestionText}>
-                      <Text style={metaStyles.suggestionName}>{card.name}</Text>
-                      <Text style={metaStyles.suggestionType} numberOfLines={1}>{card.type_line}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+        <View style={styles.flex1}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => setViewMode('deck')} style={styles.backLink}>
+              <ArrowLeft color="#b30000" size={16} style={{ marginRight: 6 }} />
+              <Text style={[styles.brandSubtitle, { marginBottom: 0 }]}>BACK TO DECK</Text>
+            </TouchableOpacity>
+            <Text style={styles.mainTitle}>METAGAME TRENDS</Text>
           </View>
-
-          {metaLoading && (
-            <View style={metaStyles.centered}>
-              <ActivityIndicator size="large" color="#b30000" />
-              <Text style={metaStyles.loadingText}>Fetching trending cards...</Text>
-            </View>
-          )}
-
-          {metaError && !metaLoading && (
-            <View style={metaStyles.centered}>
-              <Text style={metaStyles.errorText}>{metaError}</Text>
-            </View>
-          )}
-
-          {!metaLoading && metaCommander && (
-            <View style={{ padding: 16 }}>
-              <View style={metaStyles.commanderRow}>
-                {ScryfallService.getImageUrl(metaCommander, 'normal') && (
-                  <Image
-                    source={{ uri: ScryfallService.getImageUrl(metaCommander, 'normal') }}
-                    style={metaStyles.commanderImage}
-                    resizeMode="contain"
-                  />
-                )}
-                <View style={metaStyles.commanderInfo}>
-                  <Text style={metaStyles.commanderName}>{metaCommander.name}</Text>
-                  <Text style={metaStyles.commanderType}>{metaCommander.type_line}</Text>
-                  <TouchableOpacity 
-                    style={styles.commanderAddBtn}
-                    onPress={() => addToDeck(metaCommander, true)}
-                  >
-                    <Text style={styles.commanderAddText}>Add as Commander</Text>
-                  </TouchableOpacity>
-                </View>
+          <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+            <View style={metaStyles.searchSection}>
+              <View style={metaStyles.inputWrapper}>
+                <Search color="#999" size={18} style={{ marginRight: 10 }} />
+                <TextInput
+                  style={metaStyles.input}
+                  placeholder="Trending for which Commander?"
+                  value={metaQuery}
+                  onChangeText={handleSearchChange}
+                />
+                {metaSuggestLoading && <ActivityIndicator size="small" color="#b30000" style={{ marginLeft: 8 }} />}
               </View>
 
-              <Text style={metaStyles.sectionLabel}>Trending Cards for {metaCommander.name}</Text>
-              <View style={metaStyles.cardGrid}>
-                {metaTopCards.map((card, i) => (
-                  <View key={i} style={metaStyles.cardCell}>
-                    <TouchableOpacity onPress={() => setPreviewCard(card)}>
-                      <Image
-                        source={{ uri: card.imageUrl }}
-                        style={metaStyles.cardImage}
-                        resizeMode="contain"
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={metaStyles.addOverlay} 
-                      onPress={() => addMetagameCard(card)}
+              {showMetaSuggestions && metaSuggestions.length > 0 && (
+                <View style={metaStyles.suggestionList}>
+                  {metaSuggestions.map((card, i) => (
+                    <TouchableOpacity
+                      key={card.id}
+                      style={[metaStyles.suggestionRow, i < metaSuggestions.length - 1 && metaStyles.suggestionBorder]}
+                      onPress={() => selectMetagameCommander(card)}
                     >
-                      {metaAddedNames.has(card.name) ? <Check color="#fff" size={20} /> : <Plus color="#fff" size={20} />}
+                      {ScryfallService.getImageUrl(card, 'small') ? (
+                        <Image
+                          source={{ uri: ScryfallService.getImageUrl(card, 'small') }}
+                          style={metaStyles.suggestionThumb}
+                          resizeMode="cover"
+                        />
+                      ) : null}
+                      <View style={metaStyles.suggestionText}>
+                        <Text style={metaStyles.suggestionName}>{card.name}</Text>
+                        <Text style={metaStyles.suggestionType} numberOfLines={1}>{card.type_line}</Text>
+                      </View>
                     </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {!metaLoading && !metaCommander && !metaError && (
-            <View style={metaStyles.centered}>
-              <BarChart2 color="#ccc" size={48} style={{ marginBottom: 16 }} />
-              <Text style={metaStyles.hint}>Type your commander's name to see which cards other players are using most!</Text>
-              {currentDeck.commander && (
-                 <TouchableOpacity 
-                  style={[styles.importButton, { marginTop: 20, width: '100%' }]}
-                  onPress={() => selectMetagameCommander(currentDeck.commander)}
-                >
-                  <Text style={styles.importButtonText}>Search for {currentDeck.commander.name}</Text>
-                </TouchableOpacity>
+                  ))}
+                </View>
               )}
             </View>
-          )}
-        </ScrollView>
+
+            {metaLoading && (
+              <View style={metaStyles.centered}>
+                <ActivityIndicator size="large" color="#b30000" />
+                <Text style={metaStyles.loadingText}>Fetching trending cards...</Text>
+              </View>
+            )}
+
+            {metaError && !metaLoading && (
+              <View style={metaStyles.centered}>
+                <Text style={metaStyles.errorText}>{metaError}</Text>
+              </View>
+            )}
+
+            {!metaLoading && metaCommander && (
+              <View style={{ padding: 16 }}>
+                <View style={metaStyles.commanderRow}>
+                  {ScryfallService.getImageUrl(metaCommander, 'normal') && (
+                    <Image
+                      source={{ uri: ScryfallService.getImageUrl(metaCommander, 'normal') }}
+                      style={metaStyles.commanderImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                  <View style={metaStyles.commanderInfo}>
+                    <Text style={metaStyles.commanderName}>{metaCommander.name}</Text>
+                    <Text style={metaStyles.commanderType}>{metaCommander.type_line}</Text>
+                    <TouchableOpacity 
+                      style={styles.commanderAddBtn}
+                      onPress={() => addToDeck(metaCommander, true)}
+                    >
+                      <Text style={styles.commanderAddText}>Add as Commander</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <Text style={metaStyles.sectionLabel}>Trending Cards for {metaCommander.name}</Text>
+                <View style={metaStyles.cardGrid}>
+                  {metaTopCards.map((card, i) => (
+                    <View key={i} style={metaStyles.cardCell}>
+                      <TouchableOpacity onPress={() => setPreviewCard(card)}>
+                        <Image
+                          source={{ uri: card.imageUrl }}
+                          style={metaStyles.cardImage}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={metaStyles.addOverlay} 
+                        onPress={() => addMetagameCard(card)}
+                      >
+                        {metaAddedNames.has(card.name) ? <Check color="#fff" size={20} /> : <Plus color="#fff" size={20} />}
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {!metaLoading && !metaCommander && !metaError && (
+              <View style={metaStyles.centered}>
+                <BarChart2 color="#ccc" size={48} style={{ marginBottom: 16 }} />
+                <Text style={metaStyles.hint}>Type your commander's name to see which cards other players are using most!</Text>
+                {currentDeck.commander && (
+                   <TouchableOpacity 
+                    style={[styles.importButton, { marginTop: 20, width: '100%' }]}
+                    onPress={() => selectMetagameCommander(currentDeck.commander)}
+                  >
+                    <Text style={styles.importButtonText}>Search for {currentDeck.commander.name}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </ScrollView>
+        </View>
       )}
 
       {/* Card Preview Modal */}

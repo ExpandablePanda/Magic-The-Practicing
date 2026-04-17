@@ -27,5 +27,6 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#fff',
     overflow: 'hidden',
+    zIndex: 1,
   },
 });

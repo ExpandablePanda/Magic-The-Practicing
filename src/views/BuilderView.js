@@ -599,17 +599,15 @@ export default function BuilderView() {
 
   return (
     <View style={styles.container}>
-      {/* Navigation Header Group - Only show when NOT in decks view or when searching */}
-      {viewMode !== 'decks' && (
-        <View style={styles.navHeaderGroup}>
-          {/* Premium Header - Conditional Spacing */}
-          <View style={[
-            styles.premiumHeader, 
-            styles.builderHeader
-          ]}>
+      {/* Navigation Header Group - Unified Sticky Bar */}
+      <View style={styles.navHeaderGroup}>
+        {/* Premium Header - Conditional Spacing */}
+        <View style={[styles.premiumHeader, styles.builderHeader]}>
+          {viewMode !== 'decks' && (
             <TouchableOpacity onPress={goBackToDecks} style={styles.backButton}>
               <ArrowLeft color="#b30000" size={24} />
             </TouchableOpacity>
+          )}
 
           {viewMode !== 'decks' && (
             currentDeck.commander ? (
@@ -622,12 +620,12 @@ export default function BuilderView() {
              <View style={[styles.deckThumbPlaceholder, { marginRight: 15 }]}>
               <LayoutGrid color="#ccc" size={18} />
             </View>
-          )}
+          ))}
 
           <View style={styles.headerTitleGroup}>
             <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING {currentDeckId ? `- ${currentDeck.cards.length + (currentDeck.commander ? 1 : 0)} CARDS` : ''}</Text>
             <Text style={styles.mainTitle} numberOfLines={1}>
-              {currentDeck.name || 'DECK BUILDER'}
+              {viewMode === 'decks' ? 'MY DECKS' : (currentDeck.name || 'DECK BUILDER')}
             </Text>
           </View>
           {currentDeckId && (
@@ -755,10 +753,6 @@ export default function BuilderView() {
 
       {viewMode === 'decks' && (
         <View style={styles.deckListContainer}>
-          <View style={styles.dashboardHeader}>
-            <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING</Text>
-            <Text style={styles.mainTitle}>MY DECKS</Text>
-          </View>
           <FlatList
             data={decks}
             key={Platform.OS === 'web' ? 'grid' : 'list'}
@@ -769,9 +763,11 @@ export default function BuilderView() {
             contentContainerStyle={styles.listContent}
             style={styles.flex1}
           />
-          <TouchableOpacity style={styles.createNewButton} onPress={createNewDeck}>
-            <Text style={styles.importButtonText}>+ Create New Deck</Text>
-          </TouchableOpacity>
+          <View style={styles.createBtnWebContainer}>
+            <TouchableOpacity style={styles.createNewButton} onPress={createNewDeck}>
+              <Text style={styles.importButtonText}>+ Create New Deck</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -1036,9 +1032,21 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     marginBottom: 0,
     flex: 0,
-    zIndex: 10,
-    position: 'relative',
+    zIndex: 100,
+    position: Platform.OS === 'web' ? 'sticky' : 'relative',
+    top: 0,
     width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  deckListContainer: {
+    flex: 1,
+    paddingTop: Platform.OS === 'web' ? 10 : 0,
+  },
+  createBtnWebContainer: {
+    backgroundColor: '#fff',
+    paddingBottom: 20,
+    paddingTop: 10,
   },
   gridWrap: {
     flexDirection: 'row',

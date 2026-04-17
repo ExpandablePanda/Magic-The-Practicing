@@ -599,18 +599,17 @@ export default function BuilderView() {
 
   return (
     <View style={styles.container}>
-      {/* Navigation Header Group */}
-      <View style={styles.navHeaderGroup}>
-        {/* Premium Header - Conditional Spacing */}
-        <View style={[
-          styles.premiumHeader, 
-          viewMode === 'decks' ? styles.indexHeader : styles.builderHeader
-        ]}>
-          {viewMode !== 'decks' && (
+      {/* Navigation Header Group - Only show when NOT in decks view or when searching */}
+      {viewMode !== 'decks' && (
+        <View style={styles.navHeaderGroup}>
+          {/* Premium Header - Conditional Spacing */}
+          <View style={[
+            styles.premiumHeader, 
+            styles.builderHeader
+          ]}>
             <TouchableOpacity onPress={goBackToDecks} style={styles.backButton}>
-               <ArrowLeft color="#b30000" size={24} />
+              <ArrowLeft color="#b30000" size={24} />
             </TouchableOpacity>
-          )}
 
           {viewMode !== 'decks' && (
             currentDeck.commander ? (
@@ -620,16 +619,15 @@ export default function BuilderView() {
                 resizeMode="contain"
               />
             ) : (
-              <View style={[styles.deckThumbPlaceholder, { marginRight: 15 }]}>
-                <LayoutGrid color="#ccc" size={18} />
-              </View>
-            )
+             <View style={[styles.deckThumbPlaceholder, { marginRight: 15 }]}>
+              <LayoutGrid color="#ccc" size={18} />
+            </View>
           )}
 
           <View style={styles.headerTitleGroup}>
             <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING {currentDeckId ? `- ${currentDeck.cards.length + (currentDeck.commander ? 1 : 0)} CARDS` : ''}</Text>
             <Text style={styles.mainTitle} numberOfLines={1}>
-              {viewMode === 'decks' ? 'MY DECKS' : (currentDeck.name || 'DECK BUILDER')}
+              {currentDeck.name || 'DECK BUILDER'}
             </Text>
           </View>
           {currentDeckId && (
@@ -763,6 +761,12 @@ export default function BuilderView() {
             numColumns={Platform.OS === 'web' ? 2 : 1}
             keyExtractor={item => item.id}
             renderItem={renderDeckItem}
+            ListHeaderComponent={(
+              <View style={styles.dashboardHeader}>
+                <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING</Text>
+                <Text style={styles.mainTitle}>MY DECKS</Text>
+              </View>
+            )}
             ListEmptyComponent={<Text style={styles.emptyText}>No decks found. Create one!</Text>}
             contentContainerStyle={styles.listContent}
           />
@@ -1045,6 +1049,11 @@ const styles = StyleSheet.create({
   gridItem: {
     width: '48%',
     minWidth: 300,
+  },
+  dashboardHeader: {
+    paddingVertical: 20,
+    marginBottom: 10,
+    width: '100%',
   },
   chipBarContainer: {
     height: 60,

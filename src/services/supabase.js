@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // These should be moved to environment variables
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -8,8 +9,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase credentials missing! Cloud sync will be disabled.');
 }
 
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
+export const supabase = (supabaseUrl && supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storage: AsyncStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    })
   : { 
       auth: { 
         getSession: async () => ({ data: { session: null } }), 

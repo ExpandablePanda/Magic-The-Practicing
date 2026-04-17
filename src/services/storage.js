@@ -54,8 +54,8 @@ export const StorageService = {
           name: deck.name,
           cards: deck.cards || [],
           commander: deck.commander || null,
-          maybeCards: deck.maybeCards || [],
-          removedHistory: deck.removedHistory || [],
+          maybe_cards: deck.maybeCards || [],
+          removed_history: deck.removedHistory || [],
           notes: deck.notes || '',
           updated_at: new Date().toISOString()
         })), { onConflict: 'id' });

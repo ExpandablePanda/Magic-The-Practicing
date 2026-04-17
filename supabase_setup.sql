@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS decks (
   name TEXT NOT NULL,
   cards JSONB DEFAULT '[]'::jsonb,
   commander JSONB DEFAULT NULL,
-  maybeCards JSONB DEFAULT '[]'::jsonb,
-  removedHistory JSONB DEFAULT '[]'::jsonb,
+  maybe_cards JSONB DEFAULT '[]'::jsonb,
+  removed_history JSONB DEFAULT '[]'::jsonb,
   notes TEXT DEFAULT '',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL

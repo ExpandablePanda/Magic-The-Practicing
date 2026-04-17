@@ -9,7 +9,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BattlefieldCard = ({ card, onUpdatePT, onDelete }) => {
   return (
     <View style={[styles.cardContainer, card.isCommander && styles.commanderCard]}>
-      <TouchableOpacity onPress={() => onPreview(card)}>
+      <TouchableOpacity onPress={() => onDelete(card.instanceId)}>
         <Image 
           source={{ uri: ScryfallService.getImageUrl(card, 'normal') }} 
           style={styles.cardImage}
@@ -78,6 +78,8 @@ export default function PlayView() {
   const [modalQuantity, setModalQuantity] = useState(1);
   const [showMulliganModal, setShowMulliganModal] = useState(false);
   const [mulliganCount, setMulliganCount] = useState(0);
+  const [bottomingState, setBottomingState] = useState(null); // { required: n, selected: Set of instanceIds, hand: [], library: [] }
+  const [bottomingZoom, setBottomingZoom] = useState(null);
   const [showEmblemModal, setShowEmblemModal] = useState(false);
   const [emblems, setEmblems] = useState([]); // { name, icon }
 
@@ -144,37 +146,59 @@ export default function PlayView() {
     setHand([card, ...hand]);
   };
 
-  const mulligan = (type) => { // 'london' or 'multiplayer'
+  const mulligan = (type) => {
     pushHistory();
     const isMultiplayer = type === 'multiplayer';
     const isFree = isMultiplayer && mulliganCount === 0;
-    
+
     // Put hand back and reshuffle
     const fullDeck = [...hand, ...library].map(c => prepareCard(c));
     const shuffled = shuffleArray(fullDeck);
-    
     const newHand = shuffled.slice(0, 7);
     const newLibrary = shuffled.slice(7);
-    
-    setHand(newHand);
-    setLibrary(newLibrary);
-    
-    if (!isFree) {
-      setMulliganCount(prev => prev + 1);
-      if (type === 'london') {
-        Alert.alert('Mulligan', `You mulled ${mulliganCount + 1} times. Please choose ${mulliganCount + 1} cards to put on the bottom.`);
-      } else {
-        // Simple 7-X multiplayer variant if not free
-        const reducedHand = newHand.slice(0, 7 - (mulliganCount + 1));
-        const extraLib = newHand.slice(7 - (mulliganCount + 1));
-        setHand(reducedHand);
-        setLibrary([...extraLib, ...newLibrary]);
-      }
-    } else {
-      Alert.alert('Free Mulligan', 'Multiplayer rules: Your first mulligan is free! You still have 7 cards.');
-      setMulliganCount(1); // Next one won't be free
-    }
+
     setShowMulliganModal(false);
+
+    if (isFree) {
+      setHand(newHand);
+      setLibrary(newLibrary);
+      setMulliganCount(1);
+    } else {
+      const nextCount = mulliganCount + 1;
+      setMulliganCount(nextCount);
+
+      if (type === 'london') {
+        // Just redraw — bottoming happens when player chooses to keep
+        setHand(newHand);
+        setLibrary(newLibrary);
+      } else {
+        // Multiplayer: auto-bottom the last N cards (no choice needed)
+        const reducedHand = newHand.slice(0, 7 - nextCount);
+        const extraLib = newHand.slice(7 - nextCount);
+        setHand(reducedHand);
+        setLibrary([...newLibrary, ...extraLib]);
+      }
+    }
+  };
+
+  const confirmBottoming = () => {
+    if (!bottomingState) return;
+    const { selected, hand: currentHand, library: currentLibrary } = bottomingState;
+    const kept = currentHand.filter(c => !selected.has(c.instanceId));
+    const bottomed = currentHand.filter(c => selected.has(c.instanceId));
+    setHand(kept);
+    setLibrary([...currentLibrary, ...bottomed]);
+    setBottomingState(null);
+    setMulliganCount(0);
+  };
+
+  const toggleBottomCard = (instanceId) => {
+    setBottomingState(prev => {
+      const next = new Set(prev.selected);
+      if (next.has(instanceId)) next.delete(instanceId);
+      else next.add(instanceId);
+      return { ...prev, selected: next };
+    });
   };
 
   const nextTurn = () => {
@@ -306,7 +330,7 @@ export default function PlayView() {
     // 1. Pay colored requirements first
     ['W', 'U', 'B', 'R', 'G', 'C'].forEach(color => {
       while (req[color] > 0) {
-        const landIdx = untappedLands.findIndex(l => identifyLandColor(l) === color);
+        const landIdx = untappedLands.findIndex(l => identifyManaColor(l) === color);
         if (landIdx !== -1) {
           landToTapIds.push(untappedLands[landIdx].instanceId);
           untappedLands.splice(landIdx, 1);
@@ -482,7 +506,7 @@ export default function PlayView() {
 
   const applyCounters = (targetId) => {
     pushHistory();
-    setBattlefield(battlefield.map(card => {
+    setBattlefield(prev => prev.map(card => {
       if (card.instanceId === targetId) {
         const existingIdx = card.counters.findIndex(c => c.name === activeCounter.type && c.isTemp === !!activeCounter.isTemp);
         
@@ -512,7 +536,7 @@ export default function PlayView() {
 
   const renderBattlefieldCard = (card) => {
     const displayPT = calculateDisplayPT(card);
-    const hasCounters = Object.values(card.counters).some(v => v > 0);
+    const hasCounters = (card.counters || []).some(c => c.value > 0);
     const isEditing = activeActionId === card.instanceId;
 
     return (
@@ -668,15 +692,18 @@ export default function PlayView() {
 
   const updatePT = (id, type, val) => {
     pushHistory();
-    setBattlefield(battlefield.map(c => {
+    setBattlefield(prev => prev.map(c => {
       if (c.instanceId === id) {
-        return {
-          ...c,
-          counters: {
-            ...c.counters,
-            p1p1: (c.counters.p1p1 || 0) + (type === 'p' ? val : 0)
-          }
-        };
+        const counterName = type === 'p' ? (val > 0 ? '+1/+1' : '-1/-1') : '+1/+1';
+        const existingIdx = c.counters.findIndex(ct => ct.name === counterName && !ct.isTemp);
+        let newCounters;
+        if (existingIdx !== -1) {
+          newCounters = [...c.counters];
+          newCounters[existingIdx] = { ...newCounters[existingIdx], value: newCounters[existingIdx].value + Math.abs(val) };
+        } else {
+          newCounters = [...c.counters, { name: counterName, value: Math.abs(val), isTemp: false }];
+        }
+        return { ...c, counters: newCounters };
       }
       return c;
     }));
@@ -751,21 +778,24 @@ export default function PlayView() {
     pushHistory();
     const { name, p, t } = tokenTypeToSpawn;
     const artUrl = customArt || 'https://cards.scryfall.io/normal/front/5/8/5859600a-2007-4f93-9c88-e2074f939c88.jpg';
+    const artifactTokens = ['Treasure', 'Clue', 'Food'];
+    const isArtifactToken = artifactTokens.includes(name);
+    const tokenSick = !isArtifactToken;
 
     // Check if an identical token stack already exists (STRICT: state must match)
-    const existingIdx = battlefield.findIndex(c => 
-      c.isToken && 
-      c.name === name && 
-      c.image_uris?.normal === artUrl && 
-      !c.isTapped && 
-      c.hasSickness === true && // New tokens are sick
-      c.baseP === p && 
+    const existingIdx = battlefield.findIndex(c =>
+      c.isToken &&
+      c.name === name &&
+      c.image_uris?.normal === artUrl &&
+      !c.isTapped &&
+      c.hasSickness === tokenSick &&
+      c.baseP === p &&
       c.baseT === t &&
-      Object.values(c.counters).every(v => v === 0)
+      (c.counters || []).every(ct => ct.value === 0)
     );
 
     if (existingIdx !== -1) {
-      setBattlefield(prev => prev.map((c, idx) => 
+      setBattlefield(prev => prev.map((c, idx) =>
         idx === existingIdx ? { ...c, quantity: (c.quantity || 1) + count } : c
       ));
     } else {
@@ -776,10 +806,10 @@ export default function PlayView() {
         toughness: t.toString(),
         baseP: p,
         baseT: t,
-        type_line: 'Token Creature',
-        counters: { p1p1: 0, p1m0: 0, m1m1: 0, m1m0: 0 },
+        type_line: isArtifactToken ? 'Token Artifact' : 'Token Creature',
+        counters: [],
         isTapped: false,
-        hasSickness: true,
+        hasSickness: tokenSick,
         isToken: true,
         image_uris: { normal: artUrl, small: artUrl },
         quantity: count
@@ -1052,7 +1082,7 @@ export default function PlayView() {
                 <Text style={styles.undoText}>UNDO</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.resetButton} onPress={selectDeck.bind(null, fullDeckData)}>
+            <TouchableOpacity style={[styles.resetButton, !fullDeckData && { opacity: 0.3 }]} disabled={!fullDeckData} onPress={() => selectDeck(fullDeckData)}>
               <RefreshCcw color="#b30000" size={20} />
             </TouchableOpacity>
           </View>
@@ -1171,20 +1201,37 @@ export default function PlayView() {
       </View>
 
       <View style={styles.battlefieldContainer}>
-            <ScrollView 
-              style={styles.battlefieldScroll} 
+            {mulliganCount > 0 && !bottomingState && (
+              <View style={styles.mulliganChip}>
+                <Text style={styles.mulliganChipLabel}>MULLIGAN {mulliganCount}×</Text>
+                <TouchableOpacity style={styles.mulliganChipBtn} onPress={() => setShowMulliganModal(true)}>
+                  <Text style={styles.mulliganChipBtnText}>MULL AGAIN</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.mulliganChipBtn, styles.mulliganChipKeep]}
+                  onPress={() => {
+                    setBottomingState({ required: mulliganCount, selected: new Set(), hand: [...hand], library: [...library] });
+                  }}
+                >
+                  <Text style={[styles.mulliganChipBtnText, { color: '#fff' }]}>KEEP HAND</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <ScrollView
+              style={styles.battlefieldScroll}
               contentContainerStyle={styles.battlefieldContent}
               scrollEnabled={!isTargeting}
             >
-              <View style={styles.battlefieldGrid}>
-                {battlefield.map(card => renderBattlefieldCard(card))}
-                {battlefield.length === 0 && (
-                  <View style={styles.emptyBattlefield}>
-                    <LayoutGrid color="#eee" size={64} />
-                    <Text style={styles.placeholderText}>Battlefield is empty</Text>
-                  </View>
-                )}
-              </View>
+              {battlefield.length === 0 ? (
+                <View style={styles.emptyBattlefield}>
+                  <LayoutGrid color="#555" size={48} />
+                  <Text style={styles.placeholderText}>Battlefield is empty</Text>
+                </View>
+              ) : (
+                <View style={styles.battlefieldGrid}>
+                  {battlefield.map(card => renderBattlefieldCard(card))}
+                </View>
+              )}
             </ScrollView>
 
             {/* THE GREAT FIX: Drop Zone Overlay */}
@@ -1438,17 +1485,6 @@ export default function PlayView() {
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.customTokenArea}>
-                  <Text style={styles.qtyLabel}>GLOBAL SPAWN (DEFAULT ART)</Text>
-                  <View style={styles.qtyControls}>
-                    <TouchableOpacity onPress={() => { setTokenTypeToSpawn({name: 'Goblin', p: 1, t: 1}); spawnTokens(5); }} style={styles.massBtn}>
-                      <Text style={styles.massBtnText}>5 GOBLINS</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setTokenTypeToSpawn({name: 'Goblin', p: 1, t: 1}); spawnTokens(10); }} style={styles.massBtn}>
-                      <Text style={styles.massBtnText}>10 GOBLINS</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
               </>
             ) : (
               <View style={styles.artPickerContainer}>
@@ -1796,11 +1832,80 @@ export default function PlayView() {
               <Text style={styles.mullOptionSub}>{mulliganCount === 0 ? "First one is FREE! Draw 7 again." : `Draw 7, then bottom ${mulliganCount + 1}.`}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelMullBtn} onPress={() => setShowMulliganModal(false)}>
+            <TouchableOpacity
+              style={styles.cancelMullBtn}
+              onPress={() => {
+                setShowMulliganModal(false);
+                if (mulliganCount > 0) {
+                  setBottomingState({ required: mulliganCount, selected: new Set(), hand: [...hand], library: [...library] });
+                }
+              }}
+            >
               <Text style={styles.cancelMullText}>KEEP HAND</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
+      </Modal>
+
+      {/* Bottom cards selection modal */}
+      <Modal visible={!!bottomingState} transparent animationType="slide">
+        <View style={styles.bottomingOverlay}>
+          <View style={styles.bottomingContent}>
+            <Text style={styles.mullTitle}>PUT ON BOTTOM</Text>
+            <Text style={styles.mullSub}>
+              Select {bottomingState?.required} card{bottomingState?.required !== 1 ? 's' : ''} to bottom
+              {bottomingState ? ` (${bottomingState.selected.size}/${bottomingState.required} chosen)` : ''}
+            </Text>
+            <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ gap: 8, paddingVertical: 8 }}>
+              {bottomingState?.hand.map(card => {
+                const isSelected = bottomingState.selected.has(card.instanceId);
+                return (
+                  <TouchableOpacity
+                    key={card.instanceId}
+                    style={[styles.bottomCardRow, isSelected && styles.bottomCardRowSelected]}
+                    onPress={() => toggleBottomCard(card.instanceId)}
+                    onLongPress={() => setBottomingZoom(card)}
+                  >
+                    <Image
+                      source={{ uri: ScryfallService.getImageUrl(card, 'small') }}
+                      style={styles.bottomCardThumb}
+                      resizeMode="contain"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bottomCardName} numberOfLines={1}>{card.name}</Text>
+                      <Text style={styles.bottomCardType} numberOfLines={1}>{card.type_line}</Text>
+                    </View>
+                    <View style={[styles.bottomCheckbox, isSelected && styles.bottomCheckboxSelected]}>
+                      {isSelected && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>✓</Text>}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity
+              style={[
+                styles.confirmBottomBtn,
+                bottomingState?.selected.size !== bottomingState?.required && styles.confirmBottomBtnDisabled
+              ]}
+              disabled={bottomingState?.selected.size !== bottomingState?.required}
+              onPress={confirmBottoming}
+            >
+              <Text style={styles.confirmBottomText}>CONFIRM — BOTTOM SELECTED</Text>
+            </TouchableOpacity>
+
+            {/* Card zoom overlay inside the modal */}
+            {bottomingZoom && (
+              <Pressable style={styles.bottomZoomOverlay} onPress={() => setBottomingZoom(null)}>
+                <Image
+                  source={{ uri: ScryfallService.getImageUrl(bottomingZoom, 'normal') }}
+                  style={styles.bottomZoomImage}
+                  resizeMode="contain"
+                />
+                <Text style={styles.bottomZoomHint}>Tap anywhere to dismiss</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -2109,11 +2214,59 @@ const styles = StyleSheet.create({
   battlefieldContent: {
     flexGrow: 1,
   },
+  mulliganChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#1a1200',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffd70033',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  mulliganChipLabel: {
+    color: '#ffd700',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    flex: 1,
+  },
+  mulliganChipBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#2a2200',
+    borderWidth: 1,
+    borderColor: '#ffd70055',
+  },
+  mulliganChipKeep: {
+    backgroundColor: '#b30000',
+    borderColor: '#b30000',
+  },
+  mulliganChipBtnText: {
+    color: '#ffd700',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  emptyBattlefield: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 60,
+  },
+  placeholderText: {
+    color: '#555',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
   battlefieldGrid: {
     padding: 15,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 20, // Increased gap for better tapped spacing
+    gap: 20,
     justifyContent: 'center',
   },
   dropZoneOverlay: {
@@ -2734,6 +2887,97 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     color: '#999',
+    letterSpacing: 1,
+  },
+  bottomingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'flex-end',
+  },
+  bottomingContent: {
+    backgroundColor: '#1a1a1a',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  bottomCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#222',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  bottomCardRowSelected: {
+    borderColor: '#b30000',
+    backgroundColor: '#2a1010',
+  },
+  bottomCardThumb: {
+    width: 36,
+    height: 50,
+    borderRadius: 4,
+  },
+  bottomCardName: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  bottomCardType: {
+    color: '#666',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  bottomCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomCheckboxSelected: {
+    backgroundColor: '#b30000',
+    borderColor: '#b30000',
+  },
+  confirmBottomBtn: {
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#b30000',
+    alignItems: 'center',
+  },
+  confirmBottomBtnDisabled: {
+    backgroundColor: '#333',
+  },
+  confirmBottomText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  bottomZoomOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    zIndex: 50,
+  },
+  bottomZoomImage: {
+    width: '100%',
+    height: 380,
+    borderRadius: 12,
+  },
+  bottomZoomHint: {
+    color: '#555',
+    fontSize: 11,
+    marginTop: 12,
     letterSpacing: 1,
   },
   notesHeader: {

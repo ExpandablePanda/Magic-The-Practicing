@@ -264,7 +264,7 @@ export default function BuilderView() {
     // setSaved(false) is now handled by the auto-save effect
     setSaved(false);
     
-    if (forceCommander) {
+    if (asCommander) {
       Alert.alert('Commander Set', `${card.name} is now your Commander.`);
       setIsAddingCommander(false);
       setViewMode('deck');
@@ -540,7 +540,7 @@ export default function BuilderView() {
       <View style={styles.cardActions}>
         <TouchableOpacity 
           style={viewMode === 'search' ? styles.addButton : styles.removeButton} 
-          onPress={() => viewMode === 'search' ? addToDeck(item) : removeFromDeck(item.instanceId, isCommander)}
+          onPress={() => viewMode === 'search' ? addToDeck(item, isAddingCommander) : removeFromDeck(item.instanceId, isCommander)}
         >
           {viewMode === 'search' ? <Plus color="#fff" size={20} /> : <Text style={styles.removeIcon}>×</Text>}
         </TouchableOpacity>
@@ -564,7 +564,7 @@ export default function BuilderView() {
         )}
         <View style={styles.deckInfo}>
           <Text style={styles.deckName}>{item.name}</Text>
-          <Text style={styles.deckCount}>{item.cards.length + (item.commander ? 1 : 0)} cards</Text>
+          <Text style={styles.deckCount}>{(item.cards?.length || 0) + (item.commander ? 1 : 0)} cards</Text>
         </View>
       </View>
       <View style={styles.miniDeleteContainer}>
@@ -863,7 +863,7 @@ export default function BuilderView() {
                   <Text style={metaStyles.commanderType}>{metaCommander.type_line}</Text>
                   <TouchableOpacity 
                     style={styles.commanderAddBtn}
-                    onPress={() => addCard(metaCommander, true)}
+                    onPress={() => addToDeck(metaCommander, true)}
                   >
                     <Text style={styles.commanderAddText}>Add as Commander</Text>
                   </TouchableOpacity>

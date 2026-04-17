@@ -27,6 +27,10 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
         signUp: async () => ({ error: { message: 'Supabase not configured' } }),
         getUser: async () => ({ data: { user: null } })
       },
-      from: () => ({ upsert: async () => ({ error: { message: 'Supabase not configured' } }) })
+      from: () => {
+        const noop = async () => ({ data: null, error: { message: 'Supabase not configured' } });
+        const chain = { upsert: noop, insert: noop, select: () => chain, eq: () => chain, single: noop, order: () => chain, limit: () => chain };
+        return chain;
+      }
     };
 

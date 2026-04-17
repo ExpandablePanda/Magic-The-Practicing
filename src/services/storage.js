@@ -47,9 +47,9 @@ export const StorageService = {
         await AsyncStorage.setItem(KEYS.DECKS_LIST, JSON.stringify(decks));
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('decks')
-        .upsert(decks.map(deck => ({ 
+        .upsert(decks.map(deck => ({
           id: deck.id,
           user_id: user.id,
           name: deck.name,
@@ -219,16 +219,56 @@ export const StorageService = {
     }
   },
 
-  async recordResult(deckId, result) {
+  async recordResult(deckId, result, options = {}) {
     try {
+      // Save locally
       const stats = await StorageService.getStats();
       if (!stats[deckId]) stats[deckId] = { wins: 0, losses: 0, games: [] };
       if (result === 'win') stats[deckId].wins++;
       else stats[deckId].losses++;
       stats[deckId].games.push({ result, date: new Date().toISOString() });
       await AsyncStorage.setItem(KEYS.STATS, JSON.stringify(stats));
+
+      // Save to cloud if user is logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('game_results').insert({
+          player_id: user.id,
+          deck_id: deckId,
+          deck_name: options.deckName || null,
+          result,
+          game_type: 'playtest',
+          turn_count: options.turnCount || null,
+          logged_by: user.id,
+        });
+      }
     } catch (e) {
       console.error('Record Result Error:', e);
+    }
+  },
+
+  async getCloudResults(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('game_results')
+        .select('*')
+        .eq('player_id', userId)
+        .order('created_at', { ascending: false });
+      return error ? [] : (data || []);
+    } catch {
+      return [];
+    }
+  },
+
+  async ensureProfile(user) {
+    try {
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        email: user.email,
+        display_name: user.user_metadata?.display_name || user.email.split('@')[0],
+      });
+    } catch (e) {
+      console.error('Ensure Profile Error:', e);
     }
   },
 };

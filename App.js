@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Home, Play, Wrench, User as UserIcon, Heart, BarChart2 } from 'lucide-react-native';
 import { supabase } from './src/services/supabase';
 
+import { StorageService } from './src/services/storage';
 import LandingView from './src/views/LandingView';
 import PlayView from './src/views/PlayView';
 import BuilderView from './src/views/BuilderView';
@@ -26,6 +27,7 @@ export default function App() {
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         setSession(session);
+        if (session?.user) StorageService.ensureProfile(session.user);
       });
 
       return () => subscription.unsubscribe();
@@ -127,7 +129,7 @@ export default function App() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('score')}>
             <Heart color={currentView === 'score' ? '#b30000' : '#999'} size={24} />
-            <Text style={[styles.navText, currentView === 'score' && styles.activeNav]}>Score</Text>
+            <Text style={[styles.navText, currentView === 'score' && styles.activeNav]}>Live Game</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('stats')}>
             <BarChart2 color={currentView === 'stats' ? '#b30000' : '#999'} size={24} />

@@ -22,10 +22,14 @@ export default function StatsView() {
   const [showLogGame, setShowLogGame] = useState(false);
   const [logDeckName, setLogDeckName] = useState('');
   const [mySession, setMySession] = useState(null);
+  const [myCloudResults, setMyCloudResults] = useState([]);
 
   useEffect(() => {
     loadAll();
-    supabase.auth.getSession().then(({ data: { session } }) => setMySession(session));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setMySession(session);
+      if (session?.user) loadMyCloudResults(session.user.id);
+    });
   }, []);
 
   const loadAll = async () => {
@@ -37,6 +41,11 @@ export default function StatsView() {
     setDecks(allDecks);
     setStats(allStats);
     setProfiles(rawProfiles);
+  };
+
+  const loadMyCloudResults = async (userId) => {
+    const results = await StorageService.getCloudResults(userId);
+    setMyCloudResults(results);
   };
 
   const saveProfiles = async (updated) => {
@@ -189,6 +198,52 @@ export default function StatsView() {
         {/* ── LIVE GAMES TAB ── */}
         {tab === 'live' && (
           <>
+            {/* Your own performance */}
+            {mySession?.user && (() => {
+              const myResults = myCloudResults;
+              const myWins = myResults.filter(r => r.result === 'win').length;
+              const myLosses = myResults.filter(r => r.result === 'loss').length;
+              const myTotal = myWins + myLosses;
+              const myRate = myTotal > 0 ? Math.round((myWins / myTotal) * 100) : null;
+              return (
+                <View style={styles.myPerformanceCard}>
+                  <View style={styles.myPerfHeader}>
+                    <View style={styles.profileAvatar}>
+                      <Text style={styles.profileInitial}>{(mySession.user.email || 'Y')[0].toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.profileName}>You</Text>
+                      <Text style={styles.profileRecord}>{mySession.user.email}</Text>
+                    </View>
+                    <View style={[styles.cloudBadge, { backgroundColor: '#e8f5e9' }]}>
+                      <Text style={[styles.cloudBadgeText, { color: '#2d8a4e' }]}>☁ YOUR ACCOUNT</Text>
+                    </View>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryCard}>
+                      <Text style={styles.summaryNum}>{myWins}</Text>
+                      <Text style={styles.summaryLabel}>WINS</Text>
+                    </View>
+                    <View style={styles.summaryCard}>
+                      <Text style={styles.summaryNum}>{myLosses}</Text>
+                      <Text style={styles.summaryLabel}>LOSSES</Text>
+                    </View>
+                    <View style={[styles.summaryCard, { borderColor: '#b30000' }]}>
+                      <Text style={[styles.summaryNum, { color: '#b30000' }]}>{myRate !== null ? `${myRate}%` : '—'}</Text>
+                      <Text style={styles.summaryLabel}>WIN RATE</Text>
+                    </View>
+                  </View>
+                  {myResults.slice(0, 3).map((r, i) => (
+                    <View key={i} style={styles.gameRow}>
+                      <View style={[styles.resultDot, { backgroundColor: r.result === 'win' ? '#2d8a4e' : '#b30000' }]} />
+                      <Text style={styles.gameRowText}>{r.deck_name || 'Live Game'} · {r.game_type}</Text>
+                      <Text style={styles.gameRowDate}>{new Date(r.created_at).toLocaleDateString()}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
+
             <View style={styles.liveActions}>
               <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddProfile(true)}>
                 <Plus color="#fff" size={16} />
@@ -437,6 +492,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     lineHeight: 20,
+  },
+  myPerformanceCard: {
+    backgroundColor: '#f0faf4',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#2d8a4e33',
+  },
+  myPerfHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
   },
   liveActions: {
     flexDirection: 'row',

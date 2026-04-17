@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, SafeAreaView,
   Dimensions, TextInput, Modal, Pressable, ScrollView
 } from 'react-native';
-import { RefreshCcw, Skull, Shield, Zap, Swords, ChevronDown } from 'lucide-react-native';
+import { RefreshCcw, Skull, Shield, Zap, Swords, ChevronDown, UserPlus, Trophy } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../services/supabase';
+
+const PROFILES_KEY = 'mtg_local_players';
 
 const { width, height } = Dimensions.get('window');
 
@@ -24,7 +28,16 @@ export default function ScoreView() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [editingName, setEditingName] = useState(null);
   const [tempName, setTempName] = useState('');
-  const [statsModal, setStatsModal] = useState(null); // player id
+  const [statsModal, setStatsModal] = useState(null);
+  const [savedProfiles, setSavedProfiles] = useState([]);
+  const [importingForId, setImportingForId] = useState(null); // player id picking a profile
+  const [showLogResult, setShowLogResult] = useState(false);
+  const [mySession, setMySession] = useState(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(PROFILES_KEY).then(v => setSavedProfiles(v ? JSON.parse(v) : []));
+    supabase.auth.getSession().then(({ data: { session } }) => setMySession(session));
+  }, []);
 
   const isDarkMat = ['#0d0d0d','#1e2a3a','#0f1f3d','#3d0f1f','#2d5a27'].includes(playmateColor.value);
 
@@ -54,6 +67,55 @@ export default function ScoreView() {
   const changeCount = (c) => {
     setPlayerCount(c);
     setPlayers(makePlayers(c));
+  };
+
+  const importProfile = (playerId, profile) => {
+    setPlayers(p => p.map(pl => pl.id === playerId
+      ? { ...pl, name: profile.name, profileId: profile.id, isLocal: profile.isLocal }
+      : pl
+    ));
+    setImportingForId(null);
+  };
+
+  const logGameResults = async (winnerId) => {
+    const now = new Date().toISOString();
+    const loggedBy = mySession?.user?.id || null;
+    for (const player of players) {
+      const result = player.id === winnerId ? 'win' : 'loss';
+      // Update local profile game history
+      if (player.profileId) {
+        const raw = await AsyncStorage.getItem(PROFILES_KEY);
+        const profiles = raw ? JSON.parse(raw) : [];
+        const updated = profiles.map(p => {
+          if (p.id !== player.profileId) return p;
+          return { ...p, games: [{ result, deck: 'Live Game', date: now }, ...(p.games || [])] };
+        });
+        await AsyncStorage.setItem(PROFILES_KEY, JSON.stringify(updated));
+        // Push to cloud for registered users
+        if (!player.isLocal && loggedBy) {
+          await supabase.from('game_results').insert({
+            player_id: player.profileId,
+            deck_name: 'Live Game',
+            result,
+            game_type: 'live',
+            logged_by: loggedBy,
+            created_at: now,
+          });
+        }
+      }
+      // Log the session user's own result
+      if (mySession?.user && player.profileId === mySession.user.id) {
+        await supabase.from('game_results').insert({
+          player_id: mySession.user.id,
+          deck_name: 'Live Game',
+          result,
+          game_type: 'live',
+          logged_by: mySession.user.id,
+          created_at: now,
+        });
+      }
+    }
+    setShowLogResult(false);
   };
 
   const getRotation = (index) => {
@@ -90,15 +152,23 @@ export default function ScoreView() {
       >
         <View style={[styles.panelInner, { transform: [{ rotate: rotation }] }]}>
 
-          {/* Name — tap to edit */}
-          <TouchableOpacity
-            style={styles.nameBtn}
-            onPress={() => { setEditingName(player.id); setTempName(player.name); }}
-          >
-            <Text style={[styles.playerName, { color: subTextColor }]} numberOfLines={1}>
-              {player.name}
-            </Text>
-          </TouchableOpacity>
+          {/* Name row — tap name to edit, import button to load a profile */}
+          <View style={styles.nameRow}>
+            <TouchableOpacity
+              style={styles.nameBtn}
+              onPress={() => { setEditingName(player.id); setTempName(player.name); }}
+            >
+              <Text style={[styles.playerName, { color: subTextColor }]} numberOfLines={1}>
+                {player.name}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.importProfileBtn, { borderColor }]}
+              onPress={() => setImportingForId(player.id)}
+            >
+              <UserPlus color={subTextColor} size={12} />
+            </TouchableOpacity>
+          </View>
 
           {/* Life total — left = minus, right = plus */}
           <View style={styles.lifeArea}>
@@ -187,6 +257,9 @@ export default function ScoreView() {
           <ChevronDown color={subTextColor} size={12} />
         </TouchableOpacity>
 
+        <TouchableOpacity onPress={() => setShowLogResult(true)} style={[styles.resetBtn, { backgroundColor: btnBg, borderColor }]}>
+          <Trophy color={subTextColor} size={16} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={resetScores} style={[styles.resetBtn, { backgroundColor: btnBg, borderColor }]}>
           <RefreshCcw color={subTextColor} size={16} />
         </TouchableOpacity>
@@ -287,6 +360,59 @@ export default function ScoreView() {
                 <Text style={styles.nameModalSaveText}>SAVE</Text>
               </TouchableOpacity>
             </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Import Profile Modal */}
+      <Modal visible={importingForId !== null} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setImportingForId(null)}>
+          <Pressable style={styles.importModalContent} onPress={e => e.stopPropagation()}>
+            <Text style={styles.statsModalTitle}>LOAD PLAYER PROFILE</Text>
+            {savedProfiles.length === 0 && (
+              <Text style={{ color: '#888', textAlign: 'center', marginTop: 12 }}>
+                No profiles saved. Add players in the Stats tab first.
+              </Text>
+            )}
+            {savedProfiles.map(profile => (
+              <TouchableOpacity
+                key={profile.id}
+                style={styles.profilePickerRow}
+                onPress={() => importProfile(importingForId, profile)}
+              >
+                <View style={styles.profilePickerAvatar}>
+                  <Text style={styles.profilePickerInitial}>{profile.name[0].toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.profilePickerName}>{profile.name}</Text>
+                  {!profile.isLocal && (
+                    <Text style={{ color: '#1565c0', fontSize: 10, fontWeight: '700' }}>☁ Cloud Account</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Log Game Result Modal */}
+      <Modal visible={showLogResult} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLogResult(false)}>
+          <Pressable style={styles.importModalContent} onPress={e => e.stopPropagation()}>
+            <Text style={styles.statsModalTitle}>WHO WON?</Text>
+            {players.map(player => (
+              <TouchableOpacity
+                key={player.id}
+                style={styles.winnerRow}
+                onPress={() => logGameResults(player.id)}
+              >
+                <Trophy color="#c9a84c" size={16} />
+                <Text style={styles.winnerName}>{player.name}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={() => setShowLogResult(false)} style={{ marginTop: 8, alignItems: 'center' }}>
+              <Text style={{ color: '#666', fontSize: 12, fontWeight: '700' }}>Skip</Text>
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
@@ -617,5 +743,66 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  importProfileBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  importModalContent: {
+    backgroundColor: '#111',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+    gap: 4,
+  },
+  profilePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1f1f1f',
+  },
+  profilePickerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#b30000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profilePickerInitial: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  profilePickerName: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  winnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1f1f1f',
+  },
+  winnerName: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

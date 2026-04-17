@@ -1776,7 +1776,7 @@ export default function PlayView() {
             <TouchableOpacity
               style={[styles.resultBtn, { backgroundColor: '#2d8a4e' }]}
               onPress={async () => {
-                if (fullDeckData?.id) await StorageService.recordResult(fullDeckData.id, 'win');
+                if (fullDeckData?.id) await StorageService.recordResult(fullDeckData.id, 'win', { deckName: fullDeckData.name, turnCount: turnNumber });
                 setShowResultModal(false);
                 selectDeck(fullDeckData);
               }}
@@ -1786,7 +1786,7 @@ export default function PlayView() {
             <TouchableOpacity
               style={[styles.resultBtn, { backgroundColor: '#b30000' }]}
               onPress={async () => {
-                if (fullDeckData?.id) await StorageService.recordResult(fullDeckData.id, 'loss');
+                if (fullDeckData?.id) await StorageService.recordResult(fullDeckData.id, 'loss', { deckName: fullDeckData.name, turnCount: turnNumber });
                 setShowResultModal(false);
                 selectDeck(fullDeckData);
               }}

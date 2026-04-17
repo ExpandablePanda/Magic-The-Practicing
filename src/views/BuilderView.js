@@ -49,6 +49,13 @@ export default function BuilderView() {
   const [previewCard, setPreviewCard] = useState(null);
 
   // Auto-save whenever decks change, but only after initial load
+  useEffect(() => {
+    if (isLoaded) {
+      StorageService.saveDecks(decks);
+      setSaved(true);
+      const timer = setTimeout(() => setSaved(false), 2000);
+      return () => clearTimeout(timer);
+    }
   }, [decks, isLoaded]);
 
   // Metagame Search Debounce
@@ -227,7 +234,7 @@ export default function BuilderView() {
 
     const updatedDecks = decks.map(d => {
       if (d.id === currentDeckId) {
-        if (forceCommander) {
+        if (asCommander) {
           return { ...d, commander: { ...card, instanceId: 'commander' } };
         }
         

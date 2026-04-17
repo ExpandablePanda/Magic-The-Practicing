@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Modal, Pressable, ScrollView } from 'react-native';
-import { Search, Save, Plus, Check, ArrowLeft, ChevronRight, LayoutGrid, FileText, BarChart2 } from 'lucide-react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Modal, Pressable, ScrollView, Platform } from 'react-native';
+import { Search, Save, Plus, Check, ArrowLeft, ChevronRight, LayoutGrid, FileText, BarChart2, UserPlus } from 'lucide-react-native';
 import { ScryfallService } from '../services/scryfall';
 import { StorageService } from '../services/storage';
 
@@ -179,6 +179,13 @@ export default function BuilderView() {
       setMetaError(e.message || 'Failed to load data.');
     } finally {
       setMetaLoading(false);
+    }
+  };
+
+  const handleSearchChange = (text) => {
+    setMetaQuery(text);
+    if (!text.trim()) {
+      setMetaCommander(null);
     }
   };
 

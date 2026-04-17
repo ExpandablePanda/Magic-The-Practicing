@@ -1017,6 +1017,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 15,
     backgroundColor: '#fff',
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
   navHeaderGroup: {
     backgroundColor: '#fff',
@@ -1332,6 +1335,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
+    width: '100%',
   },
   sectionTitle: {
     fontSize: 11,
@@ -1420,6 +1424,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   cardItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
@@ -1544,6 +1549,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    width: '100%',
   },
   collectionBadge: {
     backgroundColor: '#b30000',

@@ -35,7 +35,9 @@ export default function BuilderView() {
   // Load decks on mount
   useEffect(() => {
     const loadAllData = async () => {
-      const allDecks = await StorageService.getDecks();
+      // Try to pull from cloud first; fall back to local if not logged in or offline
+      const cloudDecks = await StorageService.syncFromCloud();
+      const allDecks = cloudDecks ?? await StorageService.getDecks();
       const lastId = await StorageService.getCurrentDeckId();
       setDecks(allDecks);
       if (lastId && allDecks.find(d => d.id === lastId)) {

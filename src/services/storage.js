@@ -97,6 +97,44 @@ export const StorageService = {
     }
   },
 
+  async syncFromCloud() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from('decks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data || data.length === 0) return null;
+
+      const cloudDecks = data.map(row => ({
+        id: row.id,
+        name: row.name,
+        cards: row.cards || [],
+        commander: row.commander || null,
+        maybeCards: row.maybe_cards || [],
+        removedHistory: row.removed_history || [],
+        notes: row.notes || '',
+      }));
+
+      // Merge: cloud wins for any deck that exists in cloud, keep local-only decks
+      const localDecks = await this.getDecks();
+      const cloudIds = new Set(cloudDecks.map(d => d.id));
+      const localOnly = localDecks.filter(d => !cloudIds.has(d.id));
+      const merged = [...cloudDecks, ...localOnly];
+
+      await AsyncStorage.setItem(KEYS.DECKS_LIST, JSON.stringify(merged));
+      return merged;
+    } catch (e) {
+      console.error('Sync from Cloud Error:', e.message || e);
+      return null;
+    }
+  },
+
   async getDecks() {
     try {
       const jsonValue = await AsyncStorage.getItem(KEYS.DECKS_LIST);

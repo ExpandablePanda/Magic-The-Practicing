@@ -13,6 +13,8 @@ export default function BuilderView() {
   const [currentDeckId, setCurrentDeckId] = useState(null);
   const [importText, setImportText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [showNewDeckModal, setShowNewDeckModal] = useState(false);
+  const [newDeckName, setNewDeckName] = useState('');
   const [saved, setSaved] = useState(false);
   const [isAddingCommander, setIsAddingCommander] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -95,21 +97,26 @@ export default function BuilderView() {
     setCurrentDeckId(null);
   };
 
-  const createNewDeck = async () => {
-    Alert.prompt('New Deck', 'Enter a name for your deck:', async (name) => {
-      if (!name) return;
-      const newDeck = {
-        id: StorageService.generateUUID(),
-        name: name,
-        cards: [],
-        maybeCards: [],
-        removedHistory: []
-      };
-      const updatedDecks = [...decks, newDeck];
-      setDecks(updatedDecks);
-      await StorageService.saveDecks(updatedDecks);
-      selectDeck(newDeck.id);
-    });
+  const createNewDeck = () => {
+    setNewDeckName('');
+    setShowNewDeckModal(true);
+  };
+
+  const confirmCreateDeck = async () => {
+    const name = newDeckName.trim();
+    if (!name) return;
+    const newDeck = {
+      id: StorageService.generateUUID(),
+      name,
+      cards: [],
+      maybeCards: [],
+      removedHistory: []
+    };
+    const updatedDecks = [...decks, newDeck];
+    setDecks(updatedDecks);
+    await StorageService.saveDecks(updatedDecks);
+    setShowNewDeckModal(false);
+    selectDeck(newDeck.id);
   };
 
   const cloneDeck = async (deck) => {
@@ -967,6 +974,38 @@ export default function BuilderView() {
           </View>
         </Pressable>
       </Modal>
+
+      {/* New Deck Modal */}
+      <Modal visible={showNewDeckModal} transparent animationType="fade">
+        <Pressable style={styles.newDeckOverlay} onPress={() => setShowNewDeckModal(false)}>
+          <Pressable style={styles.newDeckModal} onPress={e => e.stopPropagation()}>
+            <Text style={styles.newDeckTitle}>NEW DECK</Text>
+            <TextInput
+              style={styles.newDeckInput}
+              value={newDeckName}
+              onChangeText={setNewDeckName}
+              placeholder="Deck name..."
+              placeholderTextColor="#999"
+              autoFocus
+              maxLength={40}
+              returnKeyType="done"
+              onSubmitEditing={confirmCreateDeck}
+            />
+            <View style={styles.newDeckBtns}>
+              <TouchableOpacity style={styles.newDeckCancel} onPress={() => setShowNewDeckModal(false)}>
+                <Text style={styles.newDeckCancelText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.newDeckConfirm, !newDeckName.trim() && { opacity: 0.4 }]}
+                disabled={!newDeckName.trim()}
+                onPress={confirmCreateDeck}
+              >
+                <Text style={styles.newDeckConfirmText}>CREATE</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1224,6 +1263,65 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
+  },
+  newDeckOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newDeckModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+  },
+  newDeckTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#b30000',
+    letterSpacing: 2,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  newDeckInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    color: '#1a1a1a',
+    marginBottom: 20,
+  },
+  newDeckBtns: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  newDeckCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+  },
+  newDeckCancelText: {
+    color: '#999',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  newDeckConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#b30000',
+    alignItems: 'center',
+  },
+  newDeckConfirmText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   flex1: {
     flex: 1,

@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Play, PlusSquare, BarChart2, ChevronRight } from 'lucide-react-native';
 
-export default function LandingView({ onStartPlay, onOpenBuilder, onOpenMetagame }) {
+export default function LandingView({ onStartPlay, onOpenBuilder }) {
   return (
     <View style={styles.container}>
       <View style={styles.headerSection}>
@@ -34,19 +34,6 @@ export default function LandingView({ onStartPlay, onOpenBuilder, onOpenMetagame
             <View>
               <Text style={styles.rowText}>Deck Builder</Text>
               <Text style={styles.buttonSubtext}>Search & manage cards</Text>
-            </View>
-          </View>
-          <ChevronRight color="#ccc" size={20} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionRow} onPress={onOpenMetagame}>
-          <View style={styles.buttonLeft}>
-            <View style={[styles.iconCircle, styles.secondaryIcon]}>
-              <BarChart2 color="#666" size={20} />
-            </View>
-            <View>
-              <Text style={styles.rowText}>Metagame</Text>
-              <Text style={styles.buttonSubtext}>Top cards by commander</Text>
             </View>
           </View>
           <ChevronRight color="#ccc" size={20} />

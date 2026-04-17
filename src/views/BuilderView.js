@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Modal, Pressable, ScrollView } from 'react-native';
-import { Search, Save, Plus, Check, ArrowLeft, ChevronRight, LayoutGrid, FileText } from 'lucide-react-native';
+import { Search, Save, Plus, Check, ArrowLeft, ChevronRight, LayoutGrid, FileText, BarChart2 } from 'lucide-react-native';
 import { ScryfallService } from '../services/scryfall';
 import { StorageService } from '../services/storage';
 
@@ -18,6 +18,17 @@ export default function BuilderView() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [alternatePrints, setAlternatePrints] = useState([]);
   const [loadingPrints, setLoadingPrints] = useState(false);
+  
+  // Metagame State
+  const [metaQuery, setMetaQuery] = useState('');
+  const [metaSuggestions, setMetaSuggestions] = useState([]);
+  const [showMetaSuggestions, setShowMetaSuggestions] = useState(false);
+  const [metaCommander, setMetaCommander] = useState(null);
+  const [metaTopCards, setMetaTopCards] = useState([]);
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [metaSuggestLoading, setMetaSuggestLoading] = useState(false);
+  const [metaError, setMetaError] = useState(null);
+  const [metaAddedNames, setMetaAddedNames] = useState(new Set());
 
   // Load decks on mount
   useEffect(() => {
@@ -38,14 +49,31 @@ export default function BuilderView() {
   const [previewCard, setPreviewCard] = useState(null);
 
   // Auto-save whenever decks change, but only after initial load
-  useEffect(() => {
-    if (isLoaded) {
-      StorageService.saveDecks(decks);
-      setSaved(true);
-      const timer = setTimeout(() => setSaved(false), 2000);
-      return () => clearTimeout(timer);
-    }
   }, [decks, isLoaded]);
+
+  // Metagame Search Debounce
+  useEffect(() => {
+    if (!metaQuery.trim() || metaQuery.length < 2) {
+      setMetaSuggestions([]);
+      setShowMetaSuggestions(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setMetaSuggestLoading(true);
+      try {
+        const results = await ScryfallService.searchCards(`${metaQuery} is:commander`);
+        setMetaSuggestions(results.slice(0, 8));
+        setShowMetaSuggestions(true);
+      } catch {
+        setMetaSuggestions([]);
+      } finally {
+        setMetaSuggestLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [metaQuery]);
 
   const currentDeck = decks.find(d => d.id === currentDeckId) || { cards: [], name: 'No Deck Selected' };
 
@@ -106,6 +134,57 @@ export default function BuilderView() {
         }
       }
     ]);
+  };
+
+  const selectMetagameCommander = async (card) => {
+    setMetaQuery(card.name);
+    setMetaSuggestions([]);
+    setShowMetaSuggestions(false);
+    setMetaLoading(true);
+    setMetaError(null);
+    setMetaCommander(null);
+    setMetaTopCards([]);
+
+    try {
+      setMetaCommander(card);
+      const colorIdentity = (card.color_identity || []).join('').toLowerCase() || 'c';
+      const q = `ci:${colorIdentity} f:commander -is:commander order:edhrec`;
+      const res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&page=1`);
+      if (!res.ok) throw new Error('Failed to fetch card data from Scryfall.');
+      const data = await res.json();
+
+      const cards = (data.data || []).slice(0, 60).map(sf => ({
+        ...sf,
+        imageUrl: ScryfallService.getImageUrl(sf, 'normal'),
+      })).filter(c => c.imageUrl);
+
+      setMetaTopCards(cards);
+    } catch (e) {
+      setMetaError(e.message || 'Failed to load data.');
+    } finally {
+      setMetaLoading(false);
+    }
+  };
+
+  const addMetagameCard = (card) => {
+    if (!currentDeckId) return;
+    
+    // Add to the main card list
+    const cardToAdd = {
+      ...card,
+      instanceId: Date.now() + Math.random()
+    };
+    
+    const updatedDecks = decks.map(d => {
+      if (d.id === currentDeckId) {
+        return { ...d, cards: [...d.cards, cardToAdd] };
+      }
+      return d;
+    });
+    
+    setDecks(updatedDecks);
+    setMetaAddedNames(prev => new Set([...prev, card.name]));
+    Alert.alert('Added', `${card.name} added to ${currentDeck.name}`);
   };
 
   // Fetch alternate printings when previewing a card
@@ -584,6 +663,12 @@ export default function BuilderView() {
               >
                 <Text style={[styles.chipText, viewMode === 'collection' && styles.activeChipText]}>Collection</Text>
               </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.chip, viewMode === 'metagame' && styles.activeChip]} 
+                onPress={() => setViewMode('metagame')}
+              >
+                <Text style={[styles.chipText, viewMode === 'metagame' && styles.activeChipText]}>Metagame</Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         )}
@@ -695,6 +780,127 @@ export default function BuilderView() {
             {isImporting ? <ActivityIndicator color="#fff" /> : <Text style={styles.importButtonText}>Import Deck</Text>}
           </TouchableOpacity>
         </View>
+      )}
+
+      {viewMode === 'metagame' && (
+        <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+          <View style={metaStyles.searchSection}>
+            <View style={metaStyles.inputWrapper}>
+              <Search color="#999" size={18} style={{ marginRight: 10 }} />
+              <TextInput
+                style={metaStyles.input}
+                placeholder="Trending for which Commander?"
+                value={metaQuery}
+                onChangeText={text => {
+                  setMetaQuery(text);
+                  setMetaCommander(null);
+                  setMetaTopCards([]);
+                  setMetaError(null);
+                }}
+                autoCorrect={false}
+                autoCapitalize="words"
+              />
+              {metaSuggestLoading && <ActivityIndicator size="small" color="#b30000" style={{ marginLeft: 8 }} />}
+            </View>
+
+            {showMetaSuggestions && metaSuggestions.length > 0 && (
+              <View style={metaStyles.suggestionList}>
+                {metaSuggestions.map((card, i) => (
+                  <TouchableOpacity
+                    key={card.id}
+                    style={[metaStyles.suggestionRow, i < metaSuggestions.length - 1 && metaStyles.suggestionBorder]}
+                    onPress={() => selectMetagameCommander(card)}
+                  >
+                    {ScryfallService.getImageUrl(card, 'small') ? (
+                      <Image
+                        source={{ uri: ScryfallService.getImageUrl(card, 'small') }}
+                        style={metaStyles.suggestionThumb}
+                        resizeMode="cover"
+                      />
+                    ) : null}
+                    <View style={metaStyles.suggestionText}>
+                      <Text style={metaStyles.suggestionName}>{card.name}</Text>
+                      <Text style={metaStyles.suggestionType} numberOfLines={1}>{card.type_line}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {metaLoading && (
+            <View style={metaStyles.centered}>
+              <ActivityIndicator size="large" color="#b30000" />
+              <Text style={metaStyles.loadingText}>Fetching trending cards...</Text>
+            </View>
+          )}
+
+          {metaError && !metaLoading && (
+            <View style={metaStyles.centered}>
+              <Text style={metaStyles.errorText}>{metaError}</Text>
+            </View>
+          )}
+
+          {!metaLoading && metaCommander && (
+            <View style={{ padding: 16 }}>
+              <View style={metaStyles.commanderRow}>
+                {ScryfallService.getImageUrl(metaCommander, 'normal') && (
+                  <Image
+                    source={{ uri: ScryfallService.getImageUrl(metaCommander, 'normal') }}
+                    style={metaStyles.commanderImage}
+                    resizeMode="contain"
+                  />
+                )}
+                <View style={metaStyles.commanderInfo}>
+                  <Text style={metaStyles.commanderName}>{metaCommander.name}</Text>
+                  <Text style={metaStyles.commanderType}>{metaCommander.type_line}</Text>
+                  <TouchableOpacity 
+                    style={styles.commanderAddBtn}
+                    onPress={() => addCard(metaCommander, true)}
+                  >
+                    <Text style={styles.commanderAddText}>Add as Commander</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <Text style={metaStyles.sectionLabel}>Trending Cards for {metaCommander.name}</Text>
+              <View style={metaStyles.cardGrid}>
+                {metaTopCards.map((card, i) => (
+                  <View key={i} style={metaStyles.cardCell}>
+                    <TouchableOpacity onPress={() => setPreviewCard(card)}>
+                      <Image
+                        source={{ uri: card.imageUrl }}
+                        style={metaStyles.cardImage}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={metaStyles.addOverlay} 
+                      onPress={() => addMetagameCard(card)}
+                    >
+                      {metaAddedNames.has(card.name) ? <Check color="#fff" size={20} /> : <Plus color="#fff" size={20} />}
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {!metaLoading && !metaCommander && !metaError && (
+            <View style={metaStyles.centered}>
+              <BarChart2 color="#ccc" size={48} style={{ marginBottom: 16 }} />
+              <Text style={metaStyles.hint}>Type your commander's name to see which cards other players are using most!</Text>
+              {currentDeck.commander && (
+                 <TouchableOpacity 
+                  style={[styles.importButton, { marginTop: 20, width: '100%' }]}
+                  onPress={() => selectMetagameCommander(currentDeck.commander)}
+                >
+                  <Text style={styles.importButtonText}>Search for {currentDeck.commander.name}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </ScrollView>
       )}
 
       {/* Card Preview Modal */}
@@ -1272,5 +1478,113 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     color: '#333',
+  },
+});
+
+const metaStyles = StyleSheet.create({
+  searchSection: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    zIndex: 10,
+    marginTop: 10,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 48,
+  },
+  input: { flex: 1, fontSize: 15, color: '#333' },
+  suggestionList: {
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 12,
+  },
+  suggestionBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  suggestionThumb: {
+    width: 34,
+    height: 48,
+    borderRadius: 4,
+  },
+  suggestionText: { flex: 1 },
+  suggestionName: { fontSize: 15, fontWeight: '700', color: '#222' },
+  suggestionType: { fontSize: 12, color: '#999', marginTop: 2 },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    minHeight: 300,
+  },
+  loadingText: { marginTop: 12, color: '#888', fontSize: 14 },
+  errorText: { color: '#b30000', fontSize: 15, textAlign: 'center' },
+  hint: { color: '#aaa', fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  commanderRow: {
+    flexDirection: 'row',
+    gap: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  commanderImage: { width: 110, height: 154, borderRadius: 8 },
+  commanderInfo: { flex: 1 },
+  commanderName: { fontSize: 18, fontWeight: '800', color: '#222', marginBottom: 4 },
+  commanderType: { fontSize: 13, color: '#888', marginBottom: 8 },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 14,
+  },
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  cardCell: {
+    width: '30%',
+    alignItems: 'center',
+  },
+  cardImage: { width: '100%', aspectRatio: 0.714, borderRadius: 6 },
+  addOverlay: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(179,0,0,0.8)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
   },
 });

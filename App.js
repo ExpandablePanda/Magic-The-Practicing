@@ -8,7 +8,7 @@ import LandingView from './src/views/LandingView';
 import PlayView from './src/views/PlayView';
 import BuilderView from './src/views/BuilderView';
 import AuthView from './src/views/AuthView';
-import MetagameView from './src/views/MetagameView';
+import AuthView from './src/views/AuthView';
 import ScoreView from './src/views/ScoreView';
 import WebShell from './src/components/WebShell';
 
@@ -68,15 +68,14 @@ export default function App() {
           <LandingView
             onStartPlay={() => setCurrentView('play')}
             onOpenBuilder={() => setCurrentView('builder')}
-            onOpenMetagame={() => setCurrentView('metagame')}
           />
         );
       case 'play':
         return <PlayView />;
       case 'builder':
         return <BuilderView />;
-      case 'metagame':
-        return <MetagameView onBack={() => setCurrentView('landing')} />;
+      case 'builder':
+        return <BuilderView />;
       case 'score':
         return <ScoreView onBack={() => setCurrentView('landing')} />;
       case 'account':
@@ -98,7 +97,7 @@ export default function App() {
           </View>
         );
       default:
-        return <LandingView onStartPlay={() => setCurrentView('play')} onOpenBuilder={() => setCurrentView('builder')} onOpenMetagame={() => setCurrentView('metagame')} />;
+        return <LandingView onStartPlay={() => setCurrentView('play')} onOpenBuilder={() => setCurrentView('builder')} />;
     }
   };
 

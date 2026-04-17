@@ -599,18 +599,15 @@ export default function BuilderView() {
 
   return (
     <View style={styles.container}>
-      {/* Navigation Header Group - Unified Sticky Bar */}
-      <View style={styles.navHeaderGroup}>
-        {/* Premium Header - Conditional Spacing */}
-        <View style={[styles.premiumHeader, styles.builderHeader]}>
-          {viewMode !== 'decks' && (
+      {/* Sticky Navigation Bar - Only for Builder/Editor views */}
+      {viewMode !== 'decks' && (
+        <View style={styles.navHeaderGroup}>
+          <View style={[styles.premiumHeader, styles.builderHeader]}>
             <TouchableOpacity onPress={goBackToDecks} style={styles.backButton}>
               <ArrowLeft color="#b30000" size={24} />
             </TouchableOpacity>
-          )}
 
-          {viewMode !== 'decks' && (
-            currentDeck.commander ? (
+            {currentDeck.commander ? (
               <Image 
                 source={{ uri: ScryfallService.getImageUrl(currentDeck.commander, 'small') }} 
                 style={[styles.deckThumb, { marginRight: 15 }]} 
@@ -620,12 +617,12 @@ export default function BuilderView() {
              <View style={[styles.deckThumbPlaceholder, { marginRight: 15 }]}>
               <LayoutGrid color="#ccc" size={18} />
             </View>
-          ))}
+          )}
 
           <View style={styles.headerTitleGroup}>
             <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING {currentDeckId ? `- ${currentDeck.cards.length + (currentDeck.commander ? 1 : 0)} CARDS` : ''}</Text>
             <Text style={styles.mainTitle} numberOfLines={1}>
-              {viewMode === 'decks' ? 'MY DECKS' : (currentDeck.name || 'DECK BUILDER')}
+              {currentDeck.name || 'DECK BUILDER'}
             </Text>
           </View>
           {currentDeckId && (
@@ -638,55 +635,54 @@ export default function BuilderView() {
           )}
         </View>
 
-        {viewMode !== 'decks' && (
-          <View style={styles.chipBarContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipBar} contentContainerStyle={styles.chipContent}>
-              <TouchableOpacity 
-                style={[styles.chip, viewMode === 'deck' && styles.activeChip]} 
-                onPress={() => setViewMode('deck')}
-              >
-                <Text style={[styles.chipText, viewMode === 'deck' && styles.activeChipText]}>Cards</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.chip, viewMode === 'search' && styles.activeChip]} 
-                onPress={() => setViewMode('search')}
-              >
-                <Text style={[styles.chipText, viewMode === 'search' && styles.activeChipText]}>Search</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.chip, viewMode === 'import' && styles.activeChip]} 
-                onPress={() => setViewMode('import')}
-              >
-                <Text style={[styles.chipText, viewMode === 'import' && styles.activeChipText]}>Import</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.chip, viewMode === 'maybe' && styles.activeChip]} 
-                onPress={() => setViewMode('maybe')}
-              >
-                <Text style={[styles.chipText, viewMode === 'maybe' && styles.activeChipText]}>Maybe</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.chip, viewMode === 'history' && styles.activeChip]} 
-                onPress={() => setViewMode('history')}
-              >
-                <Text style={[styles.chipText, viewMode === 'history' && styles.activeChipText]}>History</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.chip, viewMode === 'collection' && styles.activeChip]} 
-                onPress={() => setViewMode('collection')}
-              >
-                <Text style={[styles.chipText, viewMode === 'collection' && styles.activeChipText]}>Collection</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.chip, viewMode === 'metagame' && styles.activeChip]} 
-                onPress={() => setViewMode('metagame')}
-              >
-                <Text style={[styles.chipText, viewMode === 'metagame' && styles.activeChipText]}>Metagame</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        )}
+        <View style={styles.chipBarContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipBar} contentContainerStyle={styles.chipContent}>
+            <TouchableOpacity 
+              style={[styles.chip, viewMode === 'deck' && styles.activeChip]} 
+              onPress={() => setViewMode('deck')}
+            >
+              <Text style={[styles.chipText, viewMode === 'deck' && styles.activeChipText]}>Cards</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.chip, viewMode === 'search' && styles.activeChip]} 
+              onPress={() => setViewMode('search')}
+            >
+              <Text style={[styles.chipText, viewMode === 'search' && styles.activeChipText]}>Search</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.chip, viewMode === 'import' && styles.activeChip]} 
+              onPress={() => setViewMode('import')}
+            >
+              <Text style={[styles.chipText, viewMode === 'import' && styles.activeChipText]}>Import</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.chip, viewMode === 'maybe' && styles.activeChip]} 
+              onPress={() => setViewMode('maybe')}
+            >
+              <Text style={[styles.chipText, viewMode === 'maybe' && styles.activeChipText]}>Maybe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.chip, viewMode === 'history' && styles.activeChip]} 
+              onPress={() => setViewMode('history')}
+            >
+              <Text style={[styles.chipText, viewMode === 'history' && styles.activeChipText]}>History</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.chip, viewMode === 'collection' && styles.activeChip]} 
+              onPress={() => setViewMode('collection')}
+            >
+              <Text style={[styles.chipText, viewMode === 'collection' && styles.activeChipText]}>Collection</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.chip, viewMode === 'metagame' && styles.activeChip]} 
+              onPress={() => setViewMode('metagame')}
+            >
+              <Text style={[styles.chipText, viewMode === 'metagame' && styles.activeChipText]}>Metagame</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
       </View>
+    )}
 
       {(viewMode === 'deck' || viewMode === 'maybe' || viewMode === 'history' || viewMode === 'collection') && (
         <FlatList
@@ -753,6 +749,10 @@ export default function BuilderView() {
 
       {viewMode === 'decks' && (
         <View style={styles.deckListContainer}>
+          <View style={styles.dashboardHeader}>
+            <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING</Text>
+            <Text style={styles.mainTitle}>MY DECKS</Text>
+          </View>
           <FlatList
             data={decks}
             key={Platform.OS === 'web' ? 'grid' : 'list'}
@@ -1023,6 +1023,7 @@ export default function BuilderView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 15,
     backgroundColor: '#fff',
     width: '100%',
   },
@@ -1040,13 +1041,12 @@ const styles = StyleSheet.create({
   },
   deckListContainer: {
     flex: 1,
-    paddingTop: Platform.OS === 'web' ? 20 : 0,
-    paddingHorizontal: 20,
   },
   createBtnWebContainer: {
     backgroundColor: '#fff',
     paddingBottom: 20,
     paddingTop: 10,
+    marginHorizontal: -15,
   },
   gridWrap: {
     flexDirection: 'row',
@@ -1058,10 +1058,8 @@ const styles = StyleSheet.create({
     minWidth: 300,
   },
   dashboardHeader: {
-    paddingVertical: 25,
-    paddingHorizontal: 0,
-    backgroundColor: '#fff',
-    width: '100%',
+    marginTop: 20,
+    marginBottom: 20,
   },
   chipBarContainer: {
     height: 60,
@@ -1161,18 +1159,16 @@ const styles = StyleSheet.create({
   },
   brandSubtitle: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#b30000',
-    letterSpacing: 1.5,
-    marginBottom: 0,
-    paddingTop: 0,
+    letterSpacing: 2,
+    marginBottom: 4,
   },
   mainTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '900',
     color: '#1a1a1a',
     letterSpacing: -0.5,
-    lineHeight: 28,
   },
   compactSaveBtn: {
     width: 44,
@@ -1373,7 +1369,6 @@ const styles = StyleSheet.create({
   },
   typeSection: {
     marginBottom: 8,
-    paddingHorizontal: 20,
     paddingVertical: 5,
     width: '100%',
   },
@@ -1434,7 +1429,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     height: 50,
     marginBottom: 10,
-    marginHorizontal: 20,
     marginTop: 15,
   },
   input: {
@@ -1445,7 +1439,6 @@ const styles = StyleSheet.create({
   importContainer: {
     gap: 12,
     marginBottom: 20,
-    paddingHorizontal: 20,
     marginTop: 15,
   },
   importInput: {

@@ -195,7 +195,7 @@ export default function BuilderView() {
     // Add to the main card list
     const cardToAdd = {
       ...card,
-      instanceId: Date.now() + Math.random()
+      instanceId: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
     };
     
     const updatedDecks = decks.map(d => {
@@ -265,7 +265,7 @@ export default function BuilderView() {
             { 
               text: 'Add anyway', 
               onPress: () => {
-                const updated = decks.map(deck => deck.id === currentDeckId ? { ...deck, cards: [...deck.cards, { ...card, instanceId: Date.now() + Math.random() }] } : deck);
+                const updated = decks.map(deck => deck.id === currentDeckId ? { ...deck, cards: [...deck.cards, { ...card, instanceId: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}` }] } : deck);
                 setDecks(updated);
               }
             }
@@ -273,7 +273,7 @@ export default function BuilderView() {
           return d;
         }
 
-        return { ...d, cards: [...d.cards, { ...card, instanceId: Date.now() + Math.random() }] };
+        return { ...d, cards: [...d.cards, { ...card, instanceId: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}` }] };
       }
       return d;
     });
@@ -355,7 +355,7 @@ export default function BuilderView() {
   const addToMaybeboard = (card) => {
     const updatedDecks = decks.map(d => {
       if (d.id === currentDeckId) {
-        return { ...d, maybeCards: [...(d.maybeCards || []), { ...card, instanceId: Date.now() }] };
+        return { ...d, maybeCards: [...(d.maybeCards || []), { ...card, instanceId: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}` }] };
       }
       return d;
     });
@@ -516,7 +516,7 @@ export default function BuilderView() {
           if (item.asCommander && !importedCommander) {
             importedCommander = { ...found, instanceId: 'commander' };
           } else {
-            newItems.push({ ...found, instanceId: Math.random() + Date.now() });
+            newItems.push({ ...found, instanceId: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}` });
           }
         }
       });
@@ -1557,12 +1557,14 @@ const metaStyles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    paddingTop: 8,
   },
   cardCell: {
-    width: '30%',
+    width: 100,
     alignItems: 'center',
+    position: 'relative',
   },
-  cardImage: { width: '100%', aspectRatio: 0.714, borderRadius: 6 },
+  cardImage: { width: 100, height: 140, borderRadius: 6 },
   addOverlay: {
     position: 'absolute',
     top: 5,

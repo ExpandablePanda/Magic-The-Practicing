@@ -57,6 +57,7 @@ export default function PlayView() {
   const [previewCard, setPreviewCard] = useState(null);
   const [galleryCards, setGalleryCards] = useState([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [shuffleToast, setShuffleToast] = useState(false);
   const [selectedHandId, setSelectedHandId] = useState(null);
   const [activeActionId, setActiveActionId] = useState(null);
   
@@ -106,7 +107,7 @@ export default function PlayView() {
 
   const prepareCard = (card) => ({
     ...card,
-    instanceId: Math.random().toString(36).substr(2, 9), // Stable ID
+    instanceId: Math.random().toString(36).slice(2, 11), // Stable ID
     baseP: parseInt(card.power) || 0,
     baseT: parseInt(card.toughness) || 0,
     counters: [], // Refactored to array: { name, value, isTemp }
@@ -223,8 +224,9 @@ export default function PlayView() {
   };
 
   const shuffleLibrary = () => {
-    setLibrary(shuffleArray(library));
-    Alert.alert('Shuffled', 'Library randomized.');
+    setLibrary(prev => shuffleArray([...prev]));
+    setShuffleToast(true);
+    setTimeout(() => setShuffleToast(false), 2000);
   };
 
   const playCard = (instanceId) => {
@@ -599,14 +601,6 @@ export default function PlayView() {
               <TouchableOpacity style={styles.actionBtnClose} onPress={() => setActiveActionId(null)}>
                 <Text style={styles.actionBtnText}>CLOSE</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.actionBtnClose, { marginTop: 15, backgroundColor: '#ffefef', borderRadius: 8 }]} 
-                onPress={() => deleteCard(card.instanceId)}
-              >
-                <Trash2 color="#b30000" size={16} />
-                <Text style={[styles.actionBtnText, { color: '#b30000' }]}>DELETE</Text>
-              </TouchableOpacity>
             </View>
           )}
         </TouchableOpacity>
@@ -794,7 +788,7 @@ export default function PlayView() {
       ));
     } else {
       const newToken = {
-        instanceId: `token-${Math.random().toString(36).substr(2, 9)}`,
+        instanceId: `token-${Math.random().toString(36).slice(2, 11)}`,
         name,
         power: p.toString(),
         toughness: t.toString(),
@@ -840,7 +834,7 @@ export default function PlayView() {
       // 1. Create the card(s) that are being acted upon
       const actedCard = { 
         ...stack, 
-        instanceId: `token-${Math.random().toString(36).substr(2, 9)}`,
+        instanceId: `token-${Math.random().toString(36).slice(2, 11)}`,
         quantity: selectedQty 
       };
 
@@ -887,7 +881,7 @@ export default function PlayView() {
       
       const stack = prev[idx];
       const newStack = { ...stack, quantity: stack.quantity - 1 };
-      const individual = { ...stack, quantity: 1, instanceId: `token-${Math.random().toString(36).substr(2, 9)}` };
+      const individual = { ...stack, quantity: 1, instanceId: `token-${Math.random().toString(36).slice(2, 11)}` };
       
       const newField = [...prev];
       newField[idx] = newStack;
@@ -1160,9 +1154,9 @@ export default function PlayView() {
               </View>
               <Text style={styles.oppLifeTitle}>OPPONENT</Text>
               <View style={styles.lifeRow}>
-                <TouchableOpacity onPress={() => setOppLife(oppLife - 1)}><Minus color="#b30000" size={24} /></TouchableOpacity>
+                <TouchableOpacity onPress={() => setOppLife(prev => prev - 1)}><Minus color="#b30000" size={24} /></TouchableOpacity>
                 <Text style={styles.lifeValSmall}>{oppLife}</Text>
-                <TouchableOpacity onPress={() => setOppLife(oppLife + 1)}><Plus color="#b30000" size={24} /></TouchableOpacity>
+                <TouchableOpacity onPress={() => setOppLife(prev => prev + 1)}><Plus color="#b30000" size={24} /></TouchableOpacity>
               </View>
             </View>
           </View>
@@ -1184,9 +1178,14 @@ export default function PlayView() {
             </TouchableOpacity>
           ))}
           <TouchableOpacity style={styles.addEmblemBtn} onPress={() => {
-            Alert.prompt('New Global Effect', 'Enter name (e.g. Emblem, Engine, City\'s Blessing):', (name) => {
+            if (Platform.OS === 'web') {
+              const name = window.prompt('New Global Effect', '');
               if (name) setEmblems(prev => [...prev, { name }]);
-            });
+            } else {
+              Alert.prompt('New Global Effect', 'Enter name (e.g. Emblem, Engine, City\'s Blessing):', (name) => {
+                if (name) setEmblems(prev => [...prev, { name }]);
+              });
+            }
           }}>
             <Plus color="#999" size={14} />
             <Text style={styles.addEmblemText}>ADD EFFECT</Text>
@@ -1195,6 +1194,11 @@ export default function PlayView() {
       </View>
 
       <View style={styles.battlefieldContainer}>
+            {shuffleToast && (
+              <View style={styles.shuffleToast} pointerEvents="none">
+                <Text style={styles.shuffleToastText}>🔀 Library Shuffled</Text>
+              </View>
+            )}
             {mulliganCount > 0 && !bottomingState && (
               <View style={styles.mulliganChip}>
                 <Text style={styles.mulliganChipLabel}>MULLIGAN {mulliganCount}×</Text>
@@ -1311,12 +1315,12 @@ export default function PlayView() {
               </TouchableOpacity>
 
               <View style={styles.playerLifeDisplay}>
-                <TouchableOpacity onPress={() => setMyLife(myLife - 1)}><Minus color="#fff" size={24} /></TouchableOpacity>
+                <TouchableOpacity onPress={() => setMyLife(prev => prev - 1)}><Minus color="#fff" size={24} /></TouchableOpacity>
                 <View style={styles.playerLifeCircle}>
                   <Heart color="#fff" size={14} />
                   <Text style={styles.playerLifeText}>{myLife}</Text>
                 </View>
-                <TouchableOpacity onPress={() => setMyLife(myLife + 1)}><Plus color="#fff" size={24} /></TouchableOpacity>
+                <TouchableOpacity onPress={() => setMyLife(prev => prev + 1)}><Plus color="#fff" size={24} /></TouchableOpacity>
               </View>
             </View>
           </View>
@@ -1697,24 +1701,25 @@ export default function PlayView() {
                   <Text style={styles.searchItemType}>{item.type_line}</Text>
                 </View>
                 <View style={[styles.searchActions, {flexWrap: 'wrap', maxWidth: 150, justifyContent: 'flex-end'}]}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.searchActionBtn}
                     onPress={() => { moveCard(item.instanceId, showZoneModal, 'hand'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
                   >
                     <Text style={styles.searchActionText}>HAND</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.searchActionBtn}
                     onPress={() => { moveCard(item.instanceId, showZoneModal, 'battlefield'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
                   >
                     <Text style={styles.searchActionText}>FIELD</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.searchActionBtn, styles.searchActionBtnPrimary]}
                     onPress={() => { moveCard(item.instanceId, showZoneModal, 'library'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
                   >
                     <Text style={[styles.searchActionText, {color: '#fff'}]}>DECK</Text>
                   </TouchableOpacity>
+
                 </View>
               </TouchableOpacity>
             )}
@@ -1730,50 +1735,32 @@ export default function PlayView() {
       <Modal visible={!!previewCard} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => { setPreviewCard(null); setGalleryCards([]); }}>
           <View style={styles.galleryContainer}>
-            <FlatList
-              ref={galleryRef}
-              data={galleryCards}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.instanceId}
-              initialScrollIndex={galleryIndex}
-              getItemLayout={(data, index) => ({
-                length: SCREEN_WIDTH,
-                offset: SCREEN_WIDTH * index,
-                index,
-              })}
-              onMomentumScrollEnd={(e) => {
-                const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-                setGalleryIndex(index);
-              }}
-              renderItem={({ item }) => (
-                <View style={styles.gallerySlide}>
-                  <Image 
-                    source={{ uri: ScryfallService.getImageUrl(item, 'normal') }} 
-                    style={styles.previewImage} 
-                    resizeMode="contain" 
-                  />
-                  <Text style={styles.dismissTextUnderCard}>Swipe or use arrows to browse • Tap background to close</Text>
-                </View>
-              )}
-              contentContainerStyle={styles.galleryContent}
-            />
+            {galleryCards.length > 0 && (
+              <View style={styles.gallerySlide}>
+                <Image
+                  source={{ uri: ScryfallService.getImageUrl(galleryCards[galleryIndex], 'normal') }}
+                  style={styles.previewImage}
+                  resizeMode="contain"
+                />
+                <Text style={styles.dismissTextUnderCard}>
+                  {galleryCards.length > 1 ? `${galleryIndex + 1} / ${galleryCards.length} • ` : ''}Tap background to close
+                </Text>
+              </View>
+            )}
 
-            {/* Navigation Arrows */}
             {galleryIndex > 0 && (
-              <TouchableOpacity 
-                style={[styles.galleryArrow, styles.leftArrow]} 
-                onPress={() => navGallery(-1)}
+              <TouchableOpacity
+                style={[styles.galleryArrow, styles.leftArrow]}
+                onPress={(e) => { e.stopPropagation?.(); navGallery(-1); }}
               >
                 <ChevronLeft color="#fff" size={48} />
               </TouchableOpacity>
             )}
 
             {galleryIndex < galleryCards.length - 1 && (
-              <TouchableOpacity 
-                style={[styles.galleryArrow, styles.rightArrow]} 
-                onPress={() => navGallery(1)}
+              <TouchableOpacity
+                style={[styles.galleryArrow, styles.rightArrow]}
+                onPress={(e) => { e.stopPropagation?.(); navGallery(1); }}
               >
                 <ChevronRight color="#fff" size={48} />
               </TouchableOpacity>
@@ -2131,7 +2118,7 @@ const styles = StyleSheet.create({
   turnVal: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#b30000',
+    color: '#1a1a1a',
   },
   emblemScroll: {
     flex: 1,
@@ -2178,7 +2165,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 16,
   },
   stockItem: {
     alignItems: 'center',
@@ -2330,6 +2317,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1,
   },
+  shuffleToast: {
+    position: 'absolute',
+    top: 16,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    zIndex: 200,
+  },
+  shuffleToastText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   battlefieldGrid: {
     padding: 15,
     flexDirection: 'row',
@@ -2429,13 +2431,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     inset: 0,
     backgroundColor: 'rgba(255,255,255,0.9)',
+    flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: 5,
     borderRadius: 6,
     zIndex: 50,
     borderWidth: 1,
     borderColor: '#eee',
+    overflow: 'hidden',
+    padding: 4,
   },
   actionBtnCombat: {
     flexDirection: 'row',
@@ -2445,7 +2450,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     gap: 6,
-    width: '85%',
+    alignSelf: 'stretch',
     justifyContent: 'center',
   },
   actionBtnSplit: {
@@ -2456,7 +2461,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     gap: 6,
-    width: '85%',
+    alignSelf: 'stretch',
     justifyContent: 'center',
   },
   actionBtnTap: {
@@ -2467,7 +2472,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     gap: 6,
-    width: '85%',
+    alignSelf: 'stretch',
     justifyContent: 'center',
   },
   actionBtnClose: {
@@ -2482,7 +2487,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     gap: 6,
-    width: '85%',
+    alignSelf: 'stretch',
     justifyContent: 'center',
   },
   actionBtnETBTapped: {
@@ -2493,7 +2498,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     gap: 6,
-    width: '85%',
+    alignSelf: 'stretch',
     justifyContent: 'center',
   },
   actionBtnText: {
@@ -2849,8 +2854,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   previewImage: {
-    width: '90%',
-    height: '80%',
+    width: 300,
+    height: 420,
   },
   galleryContainer: {
     flex: 1,
@@ -3253,8 +3258,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f8f8f8',
   },
   searchThumb: {
-    width: 50,
-    height: 70,
+    width: 100,
+    height: 140,
     borderRadius: 6,
     marginRight: 12,
   },

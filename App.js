@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Home, Play, PenTool, User as UserIcon, Heart } from 'lucide-react-native';
+import { Home, Play, Wrench, User as UserIcon, Heart } from 'lucide-react-native';
 import { supabase } from './src/services/supabase';
 
 import LandingView from './src/views/LandingView';
@@ -73,8 +73,6 @@ export default function App() {
         return <PlayView />;
       case 'builder':
         return <BuilderView />;
-      case 'builder':
-        return <BuilderView />;
       case 'score':
         return <ScoreView onBack={() => setCurrentView('landing')} />;
       case 'account':
@@ -121,7 +119,7 @@ export default function App() {
             <Text style={[styles.navText, currentView === 'play' && styles.activeNav]}>Play</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('builder')}>
-            <PenTool color={currentView === 'builder' ? '#b30000' : '#999'} size={24} />
+            <Wrench color={currentView === 'builder' ? '#b30000' : '#999'} size={24} />
             <Text style={[styles.navText, currentView === 'builder' && styles.activeNav]}>Builder</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('score')}>

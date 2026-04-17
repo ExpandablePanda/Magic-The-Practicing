@@ -48,6 +48,7 @@ export default function PlayView() {
   // Game Logic State
   const [landsPlayedThisTurn, setLandsPlayedThisTurn] = useState(0);
   const [commanderTax, setCommanderTax] = useState(0);
+  const [gameAlert, setGameAlert] = useState(null); // { message, onConfirm, confirmLabel }
   
   // Interaction State
   const [viewMode, setViewMode] = useState('index'); 
@@ -233,14 +234,11 @@ export default function PlayView() {
     const isLand = card.type_line?.includes('Land');
 
     if (isLand && landsPlayedThisTurn >= 1) {
-      Alert.alert(
-        'Land Limit',
-        'You have already played a land this turn. Do you have a card allowing you to play an additional land?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Yes, Play It', onPress: () => finalizePlayCard(card) }
-        ]
-      );
+      setGameAlert({
+        message: 'You\'ve already played a land this turn. Do you have a card allowing an additional land?',
+        confirmLabel: 'Yes, Play It',
+        onConfirm: () => finalizePlayCard(card),
+      });
       return;
     }
 
@@ -360,14 +358,11 @@ export default function PlayView() {
       const cost = parseManaCost(card.mana_cost);
       const available = getAvailableMana();
       if (!canAfford(cost, available)) {
-        Alert.alert(
-          'Insufficient Mana',
-          `Casting ${card.name} requires ${card.mana_cost || 'mana'}. You don't have enough untapped lands of the right colors.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Force Play (Dork/Artifact)', onPress: () => finalizePlayCard(card, true) }
-          ]
-        );
+        setGameAlert({
+          message: `Casting ${card.name} requires ${card.mana_cost || 'mana'}. Not enough untapped lands of the right colors.`,
+          confirmLabel: 'Force Play',
+          onConfirm: () => finalizePlayCard(card, true),
+        });
         return;
       }
       payMana(cost);
@@ -432,14 +427,12 @@ export default function PlayView() {
       const available = getAvailableMana();
       
       if (!canAfford(totalCost, available)) {
-        Alert.alert(
-          'Insufficient Mana',
-          `Casting your commander requires ${card.mana_cost || 'mana'} + {${commanderTax * 2}} tax.`,
-          [
-            { text: 'Cancel', onPress: () => setIsCommanderSelected(false), style: 'cancel' },
-            { text: 'Force Play (Dork/Artifact)', onPress: () => castCommander(true) }
-          ]
-        );
+        setGameAlert({
+          message: `Casting your commander requires ${card.mana_cost || 'mana'}${commanderTax > 0 ? ` + {${commanderTax * 2}} commander tax` : ''}. Not enough mana.`,
+          confirmLabel: 'Force Play',
+          onConfirm: () => castCommander(true),
+          onCancel: () => setIsCommanderSelected(false),
+        });
         return;
       }
       payMana(totalCost);
@@ -1907,11 +1900,85 @@ export default function PlayView() {
           </View>
         </View>
       </Modal>
+
+      {/* Cross-platform game alert (replaces Alert.alert which doesn't work on web) */}
+      <Modal visible={!!gameAlert} transparent animationType="fade">
+        <Pressable style={styles.gameAlertOverlay} onPress={() => { gameAlert?.onCancel?.(); setGameAlert(null); }}>
+          <Pressable style={styles.gameAlertBox} onPress={e => e.stopPropagation()}>
+            <Text style={styles.gameAlertMessage}>{gameAlert?.message}</Text>
+            <View style={styles.gameAlertBtns}>
+              <TouchableOpacity
+                style={styles.gameAlertCancel}
+                onPress={() => { gameAlert?.onCancel?.(); setGameAlert(null); }}
+              >
+                <Text style={styles.gameAlertCancelText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.gameAlertConfirm}
+                onPress={() => { gameAlert?.onConfirm?.(); setGameAlert(null); }}
+              >
+                <Text style={styles.gameAlertConfirmText}>{gameAlert?.confirmLabel || 'OK'}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  gameAlertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gameAlertBox: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+    maxWidth: 340,
+    gap: 20,
+  },
+  gameAlertMessage: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  gameAlertBtns: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  gameAlertCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#333',
+    alignItems: 'center',
+  },
+  gameAlertCancelText: {
+    color: '#888',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  gameAlertConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#b30000',
+    alignItems: 'center',
+  },
+  gameAlertConfirmText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',

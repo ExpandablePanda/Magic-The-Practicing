@@ -46,14 +46,19 @@ export const ScryfallService = {
    */
   getImageUrl(card, size = 'normal') {
     if (!card) return null;
-    
-    // Handle multi-faced cards (like double-faced or adventure)
-    if (card.image_uris) {
-      return card.image_uris[size];
-    } else if (card.card_faces && card.card_faces[0].image_uris) {
-      return card.card_faces[0].image_uris[size];
-    }
-    
+    const SIZE_FALLBACKS = ['normal', 'large', 'small', 'png', 'border_crop', 'art_crop'];
+
+    const pickUrl = (uris) => {
+      if (!uris) return null;
+      if (uris[size]) return uris[size];
+      for (const s of SIZE_FALLBACKS) {
+        if (uris[s]) return uris[s];
+      }
+      return null;
+    };
+
+    if (card.image_uris) return pickUrl(card.image_uris);
+    if (card.card_faces?.[0]?.image_uris) return pickUrl(card.card_faces[0].image_uris);
     return null;
   },
 

@@ -2374,7 +2374,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   cardContainer: {
-    width: '40%', // Slightly smaller to allow tapped cards to fit side-by-side
+    width: 100,
     aspectRatio: 0.72,
     marginBottom: 15,
     position: 'relative',

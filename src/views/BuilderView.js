@@ -1091,6 +1091,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  listDeckThumb: {
+    width: 44,
+    height: 62,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  listDeckThumbPlaceholder: {
+    width: 44,
+    height: 62,
+    borderRadius: 6,
+    marginRight: 12,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   deckInfo: {
     flex: 1,
   },

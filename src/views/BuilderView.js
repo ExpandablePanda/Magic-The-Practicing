@@ -1007,7 +1007,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     letterSpacing: -0.5,
   },
-  },
   tab: {
     flex: 1,
     paddingVertical: 8,

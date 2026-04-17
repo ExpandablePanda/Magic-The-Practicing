@@ -1021,7 +1021,6 @@ export default function BuilderView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 15,
     backgroundColor: '#fff',
     width: '100%',
   },
@@ -1039,7 +1038,8 @@ const styles = StyleSheet.create({
   },
   deckListContainer: {
     flex: 1,
-    paddingTop: Platform.OS === 'web' ? 30 : 15,
+    paddingTop: Platform.OS === 'web' ? 40 : 15,
+    paddingHorizontal: 20,
   },
   createBtnWebContainer: {
     backgroundColor: '#fff',
@@ -1370,6 +1370,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingVertical: 5,
     width: '100%',
+    paddingHorizontal: 20,
   },
   sectionTitle: {
     fontSize: 11,
@@ -1429,6 +1430,7 @@ const styles = StyleSheet.create({
     height: 50,
     marginBottom: 10,
     marginTop: 15,
+    marginHorizontal: 20,
   },
   input: {
     flex: 1,
@@ -1439,6 +1441,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 20,
     marginTop: 15,
+    paddingHorizontal: 20,
   },
   importInput: {
     backgroundColor: '#f5f5f5',

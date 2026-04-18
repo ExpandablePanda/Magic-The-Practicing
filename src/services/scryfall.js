@@ -1,6 +1,22 @@
 const SCRYFALL_BASE_URL = 'https://api.scryfall.com';
 export const CARD_BACK_URL = 'https://gamepedia.cursecdn.com/mtgsalvation_gamepedia/f/f8/Magic_card_back.jpg';
 
+// Rate limiting state
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 100; // 100ms = 10 requests/sec max
+
+const rateLimitedFetch = async (url, options = {}) => {
+  const now = Date.now();
+  const waitTime = Math.max(0, MIN_REQUEST_INTERVAL - (now - lastRequestTime));
+  
+  if (waitTime > 0) {
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  lastRequestTime = Date.now();
+  return fetch(url, options);
+};
+
 export const ScryfallService = {
   /**
    * Search for cards by name.
@@ -11,7 +27,7 @@ export const ScryfallService = {
     if (!query || query.length < 3) return [];
     
     try {
-      const response = await fetch(`${SCRYFALL_BASE_URL}/cards/search?q=${encodeURIComponent(query)}`);
+      const response = await rateLimitedFetch(`${SCRYFALL_BASE_URL}/cards/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
       
       if (data.object === 'error') {
@@ -32,7 +48,7 @@ export const ScryfallService = {
    */
   async getCardById(id) {
     try {
-      const response = await fetch(`${SCRYFALL_BASE_URL}/cards/${id}`);
+      const response = await rateLimitedFetch(`${SCRYFALL_BASE_URL}/cards/${id}`);
       return await response.json();
     } catch (error) {
       console.error('Fetch Error:', error);
@@ -71,7 +87,7 @@ export const ScryfallService = {
     
     try {
       // Scryfall allows up to 75 cards per request
-      const response = await fetch(`${SCRYFALL_BASE_URL}/cards/collection`, {
+      const response = await rateLimitedFetch(`${SCRYFALL_BASE_URL}/cards/collection`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifiers })
@@ -93,7 +109,7 @@ export const ScryfallService = {
     if (!oracleId) return [];
     
     try {
-      const response = await fetch(`${SCRYFALL_BASE_URL}/cards/search?q=oracle_id:${oracleId}&unique=prints`);
+      const response = await rateLimitedFetch(`${SCRYFALL_BASE_URL}/cards/search?q=oracle_id:${oracleId}&unique=prints`);
       const data = await response.json();
       
       if (data.object === 'error') {
@@ -114,7 +130,7 @@ export const ScryfallService = {
   async fetchTokenPrints(name) {
     if (!name) return [];
     try {
-      const response = await fetch(`${SCRYFALL_BASE_URL}/cards/search?q=t:token+name:"${encodeURIComponent(name)}"+unique:art`);
+      const response = await rateLimitedFetch(`${SCRYFALL_BASE_URL}/cards/search?q=t:token+name:"${encodeURIComponent(name)}"+unique:art`);
       const data = await response.json();
       return data.data || [];
     } catch (error) {

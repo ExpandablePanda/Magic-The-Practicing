@@ -13,11 +13,12 @@ import ScoreView from './src/views/ScoreView';
 import StatsView from './src/views/StatsView';
 import WebShell from './src/components/WebShell';
 
-const APP_VERSION = 'V1.3.5';
+const APP_VERSION = 'V1.6.3';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('landing');
   const [session, setSession] = useState(undefined); // undefined = loading
+  const [footerVisible, setFooterVisible] = useState(true);
 
   useEffect(() => {
     if (supabase && supabase.auth) {
@@ -70,10 +71,12 @@ export default function App() {
           <LandingView
             onStartPlay={() => setCurrentView('play')}
             onOpenBuilder={() => setCurrentView('builder')}
+            onOpenLiveGame={() => setCurrentView('score')}
+            onOpenStats={() => setCurrentView('stats')}
           />
         );
       case 'play':
-        return <PlayView />;
+        return <PlayView onSetFooterVisible={setFooterVisible} />;
       case 'builder':
         return <BuilderView />;
       case 'score':
@@ -99,7 +102,14 @@ export default function App() {
           </View>
         );
       default:
-        return <LandingView onStartPlay={() => setCurrentView('play')} onOpenBuilder={() => setCurrentView('builder')} />;
+        return (
+          <LandingView
+            onStartPlay={() => setCurrentView('play')}
+            onOpenBuilder={() => setCurrentView('builder')}
+            onOpenLiveGame={() => setCurrentView('score')}
+            onOpenStats={() => setCurrentView('stats')}
+          />
+        );
     }
   };
 
@@ -114,32 +124,34 @@ export default function App() {
           {renderView()}
         </View>
 
-        <View style={styles.navShell}>
-          <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('landing')}>
-            <Home color={currentView === 'landing' ? '#b30000' : '#999'} size={24} />
-            <Text style={[styles.navText, currentView === 'landing' && styles.activeNav]}>Home</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('play')}>
-            <Play color={currentView === 'play' ? '#b30000' : '#999'} size={24} />
-            <Text style={[styles.navText, currentView === 'play' && styles.activeNav]}>Play</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('builder')}>
-            <Wrench color={currentView === 'builder' ? '#b30000' : '#999'} size={24} />
-            <Text style={[styles.navText, currentView === 'builder' && styles.activeNav]}>Builder</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('score')}>
-            <Heart color={currentView === 'score' ? '#b30000' : '#999'} size={24} />
-            <Text style={[styles.navText, currentView === 'score' && styles.activeNav]}>Live Game</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('stats')}>
-            <BarChart2 color={currentView === 'stats' ? '#b30000' : '#999'} size={24} />
-            <Text style={[styles.navText, currentView === 'stats' && styles.activeNav]}>Stats</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('account')}>
-            <UserIcon color={currentView === 'account' ? '#b30000' : '#999'} size={24} />
-            <Text style={[styles.navText, currentView === 'account' && styles.activeNav]}>Account</Text>
-          </TouchableOpacity>
-        </View>
+        {footerVisible && (
+          <View style={styles.navShell}>
+            <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('landing')}>
+              <Home color={currentView === 'landing' ? '#b30000' : '#999'} size={24} />
+              <Text style={[styles.navText, currentView === 'landing' && styles.activeNav]}>Home</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('play')}>
+              <Play color={currentView === 'play' ? '#b30000' : '#999'} size={24} />
+              <Text style={[styles.navText, currentView === 'play' && styles.activeNav]}>Play</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('builder')}>
+              <Wrench color={currentView === 'builder' ? '#b30000' : '#999'} size={24} />
+              <Text style={[styles.navText, currentView === 'builder' && styles.activeNav]}>Builder</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('score')}>
+              <Heart color={currentView === 'score' ? '#b30000' : '#999'} size={24} />
+              <Text style={[styles.navText, currentView === 'score' && styles.activeNav]}>Live Game</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('stats')}>
+              <BarChart2 color={currentView === 'stats' ? '#b30000' : '#999'} size={24} />
+              <Text style={[styles.navText, currentView === 'stats' && styles.activeNav]}>Stats</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('account')}>
+              <UserIcon color={currentView === 'account' ? '#b30000' : '#999'} size={24} />
+              <Text style={[styles.navText, currentView === 'account' && styles.activeNav]}>Account</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <StatusBar style="auto" />
       </SafeAreaView>
@@ -170,8 +182,8 @@ const styles = StyleSheet.create({
   },
   versionBar: {
     position: 'absolute',
-    top: Platform.OS === 'web' ? 10 : 4,
-    right: 20,
+    top: Platform.OS === 'web' ? 12 : 45,
+    right: 28,
     zIndex: 1000,
   },
   version: {
@@ -186,12 +198,12 @@ const styles = StyleSheet.create({
   },
   navShell: {
     flexDirection: 'row',
-    height: Platform.OS === 'web' ? 80 : 85,
+    height: Platform.OS === 'web' ? 65 : 65,
     borderTopWidth: 1,
     borderTopColor: '#eee',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingBottom: Platform.OS === 'ios' ? 25 : 0,
+    paddingBottom: Platform.OS === 'ios' ? 0 : 0,
     backgroundColor: '#fff',
     paddingHorizontal: Platform.OS === 'web' ? '15%' : 0,
   },
@@ -203,6 +215,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     color: '#999',
+    textAlign: 'center',
   },
   activeNav: {
     color: '#b30000',

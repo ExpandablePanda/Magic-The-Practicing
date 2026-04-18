@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Modal, Pressable, ScrollView, Platform } from 'react-native';
-import { Search, Save, Plus, Check, ArrowLeft, ChevronLeft, ChevronRight, LayoutGrid, FileText, BarChart2, UserPlus } from 'lucide-react-native';
+import { Search, Save, Plus, Check, ArrowLeft, ChevronLeft, ChevronRight, LayoutGrid, FileText, BarChart2, UserPlus, Filter } from 'lucide-react-native';
 import { ScryfallService } from '../services/scryfall';
 import { StorageService } from '../services/storage';
 
@@ -28,11 +28,15 @@ export default function BuilderView() {
   const [metaSuggestions, setMetaSuggestions] = useState([]);
   const [showMetaSuggestions, setShowMetaSuggestions] = useState(false);
   const [metaCommander, setMetaCommander] = useState(null);
-  const [metaTopCards, setMetaTopCards] = useState([]);
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaSuggestLoading, setMetaSuggestLoading] = useState(false);
   const [metaError, setMetaError] = useState(null);
   const [metaAddedNames, setMetaAddedNames] = useState(new Set());
+  const [metaSortMode, setMetaSortMode] = useState('rank'); // 'rank' or 'type'
+  const [metaCategory, setMetaCategory] = useState('top'); // 'top', 'synergy', 'new'
+  const [metaTopCards, setMetaTopCards] = useState([]);
+  const [metaSynergyCards, setMetaSynergyCards] = useState([]);
+  const [metaNewCards, setMetaNewCards] = useState([]);
   const [metaGalleryIndex, setMetaGalleryIndex] = useState(null);
 
   // Load decks on mount
@@ -56,6 +60,45 @@ export default function BuilderView() {
   }, []);
 
   const [previewCard, setPreviewCard] = useState(null);
+  const [previewList, setPreviewList] = useState([]);
+  const [previewIndex, setPreviewIndex] = useState(null);
+
+  const handleOpenPreview = (card, list = [], index = null) => {
+    setPreviewCard(card);
+    setPreviewList(list);
+    setPreviewIndex(index);
+  };
+
+  const navigatePreview = (direction) => {
+    if (!previewList || previewList.length === 0) return;
+    let nextIndex = previewIndex + direction;
+    
+    // Loop around
+    if (nextIndex < 0) nextIndex = previewList.length - 1;
+    if (nextIndex >= previewList.length) nextIndex = 0;
+    
+    setPreviewIndex(nextIndex);
+    setPreviewCard(previewList[nextIndex]);
+    
+    // Small vibration or sound effect could go here if we had native modules
+  };
+
+  // Keyboard navigation for web
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !previewCard) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') navigatePreview(-1);
+      if (e.key === 'ArrowRight') navigatePreview(1);
+      if (e.key === 'Escape') {
+        setPreviewCard(null);
+        setAlternatePrints([]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewCard, previewIndex, previewList]);
 
   // Auto-save whenever decks change, but only after initial load
   useEffect(() => {
@@ -174,18 +217,62 @@ export default function BuilderView() {
     try {
       setMetaCommander(card);
       const colorIdentity = (card.color_identity || []).join('').toLowerCase() || 'c';
-      const q = `ci:${colorIdentity} f:commander -is:commander order:edhrec`;
-      const res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&page=1`);
-      if (!res.ok) throw new Error('Failed to fetch card data from Scryfall.');
-      const data = await res.json();
+      
+      // Extract primary creature type for synergy (e.g. "Goblin" from "Legendary Creature — Goblin Warrior")
+      let primaryType = '';
+      if (card.type_line.includes(' \u2014 ')) {
+        const parts = card.type_line.split(' \u2014 ');
+        if (parts[1]) {
+           const subtypes = parts[1].split(' ');
+           // Skip common role types like "Warrior", "Wizard", etc if possible, or just take the first
+           primaryType = subtypes[0];
+        }
+      }
 
-      const cards = (data.data || []).slice(0, 60).map(sf => ({
-        ...sf,
-        imageUrl: ScryfallService.getImageUrl(sf, 'normal'),
-      })).filter(c => c.imageUrl);
+      // Extract the base name (first word) to catch related cards (e.g. "Krenko" from "Krenko, Mob Boss")
+      const baseName = card.name.split(',')[0].split(' ')[0];
 
-      setMetaTopCards(cards);
-      setMetaGalleryIndex(cards.length > 0 ? 0 : null);
+      // Query 1: Most popular cards in these colors (Top Cards)
+      // We mix in the commander's name to ensure we get legendary versions or cards that mention it
+      const qTop = `ci:${colorIdentity} f:commander -is:commander (o:"${baseName}" OR o:"${card.name}" OR t:${primaryType} OR order:edhrec) order:edhrec`;
+      // Query 2: High Synergy cards matching the Commander's type or mentioning its name
+      const qSynergy = primaryType ? `ci:${colorIdentity} f:commander -is:commander (t:${primaryType} OR o:${primaryType} OR o:"${baseName}") order:edhrec` : null;
+      // Query 3: Newest cards in these colors (New Cards)
+      const qNew = `ci:${colorIdentity} f:commander -is:commander order:released`;
+
+      const [resTop, resSynergy, resNew] = await Promise.all([
+        fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(qTop)}&page=1`),
+        qSynergy ? fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(qSynergy)}&page=1`) : Promise.resolve(null),
+        fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(qNew)}&page=1`)
+      ]);
+
+      const processResults = async (res) => {
+        if (!res || !res.ok) return [];
+        const data = await res.json();
+        return (data.data || []).map(sf => ({
+          ...sf,
+          imageUrl: ScryfallService.getImageUrl(sf, 'normal'),
+        })).filter(c => c.imageUrl).slice(0, 100);
+      };
+
+      const [topCards, synergyCards, newCards] = await Promise.all([
+        processResults(resTop),
+        processResults(resSynergy),
+        processResults(resNew)
+      ]);
+
+      // Deduplicate for the default "Top" view which is a mix
+      const seen = new Set();
+      const mergedTop = [...synergyCards.slice(0, 50), ...topCards.slice(0, 100)].filter(c => {
+        if (seen.has(c.name)) return false;
+        seen.add(c.name);
+        return true;
+      });
+
+      setMetaTopCards(mergedTop);
+      setMetaSynergyCards(synergyCards);
+      setMetaNewCards(newCards);
+      setMetaGalleryIndex(mergedTop.length > 0 ? 0 : null);
     } catch (e) {
       setMetaError(e.message || 'Failed to load data.');
     } finally {
@@ -193,10 +280,46 @@ export default function BuilderView() {
     }
   };
 
+  const getCurrentMetaCards = () => {
+    let baseList = [];
+    if (metaCategory === 'top') baseList = metaTopCards;
+    else if (metaCategory === 'synergy') baseList = metaSynergyCards;
+    else if (metaCategory === 'new') baseList = metaNewCards;
+
+    if (metaSortMode === 'rank') return baseList;
+    
+    return [...baseList].sort((a, b) => {
+      const typeOrder = (card) => {
+        const t = card.type_line?.toLowerCase() || '';
+        if (t.includes('land')) return 0;
+        if (t.includes('artifact')) return 1;
+        if (t.includes('sorcery')) return 2;
+        if (t.includes('enchantment')) return 3;
+        // Priority to legendary creatures if specified
+        if (t.includes('legendary creature')) return 4;
+        if (t.includes('creature')) return 5;
+        if (t.includes('planeswalker')) return 6;
+        if (t.includes('instant')) return 7;
+        return 8;
+      };
+      
+      const orderA = typeOrder(a);
+      const orderB = typeOrder(b);
+      
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name);
+    });
+  };
+
   const handleSearchChange = (text) => {
     setMetaQuery(text);
     if (!text.trim()) {
       setMetaCommander(null);
+      setMetaSortMode('rank');
+      setMetaCategory('top');
+      setMetaTopCards([]);
+      setMetaSynergyCards([]);
+      setMetaNewCards([]);
     }
   };
 
@@ -223,7 +346,7 @@ export default function BuilderView() {
 
   // Fetch alternate printings when previewing a card
   useEffect(() => {
-    const fetchPrints = async () => {
+    const timer = setTimeout(async () => {
       if (previewCard && previewCard.oracle_id) {
         setLoadingPrints(true);
         const prints = await ScryfallService.getAlternatePrintings(previewCard.oracle_id);
@@ -232,8 +355,9 @@ export default function BuilderView() {
       } else {
         setAlternatePrints([]);
       }
-    };
-    fetchPrints();
+    }, 300); // Debounce to allow fast navigation without hitting API limits
+
+    return () => clearTimeout(timer);
   }, [previewCard]);
 
   // Basic debounce search
@@ -553,18 +677,18 @@ export default function BuilderView() {
     }
   };
 
-  const renderCardItem = ({ item, isCommander = false }) => {
+  const renderCardItem = ({ item, isCommander = false, list = [], index = null }) => {
     const price = item.prices?.usd ? `$${parseFloat(item.prices.usd).toFixed(2)}` : null;
     const isIllegal = item.legalities?.commander === 'not_legal' || item.legalities?.commander === 'banned';
     return (
       <View style={[styles.cardItem, isCommander && styles.commanderItem]}>
-        <TouchableOpacity onPress={() => setPreviewCard(item)} onLongPress={() => setPreviewCard(item)}>
+        <TouchableOpacity onPress={() => handleOpenPreview(item, list, index)} onLongPress={() => handleOpenPreview(item, list, index)}>
           <Image source={{ uri: ScryfallService.getImageUrl(item, 'small') }} style={styles.cardThumb} resizeMode="contain" />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.cardInfo}
-          onPress={() => setPreviewCard(item)}
-          onLongPress={() => setPreviewCard(item)}
+          onPress={() => handleOpenPreview(item, list, index)}
+          onLongPress={() => handleOpenPreview(item, list, index)}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
@@ -729,9 +853,9 @@ export default function BuilderView() {
               <View style={styles.typeSection}>
                 <Text style={styles.sectionTitle}>{section.title} ({section.data.length})</Text>
                 <View style={Platform.OS === 'web' ? styles.gridWrap : null}>
-                  {section.data.map(card => (
+                  {section.data.map((card, cardIndex) => (
                     <View key={card.instanceId} style={Platform.OS === 'web' ? styles.gridItem : null}>
-                      {renderCardItem({ item: card })}
+                      {renderCardItem({ item: card, index: cardIndex, list: section.data })}
                     </View>
                   ))}
                 </View>
@@ -765,7 +889,7 @@ export default function BuilderView() {
                     {currentDeck.commander ? (
                       <View style={styles.typeSection}>
                         <Text style={styles.sectionTitle}>COMMANDER</Text>
-                        {renderCardItem({ item: currentDeck.commander, isCommander: true })}
+                        {renderCardItem({ item: currentDeck.commander, isCommander: true, list: [currentDeck.commander], index: 0 })}
                       </View>
                     ) : (
                       <TouchableOpacity 
@@ -807,7 +931,7 @@ export default function BuilderView() {
             key={Platform.OS === 'web' ? 'results_grid' : 'results_list'}
             numColumns={Platform.OS === 'web' ? 3 : 1}
             keyExtractor={(item, index) => `${item.id}-${index}`}
-            renderItem={renderCardItem}
+            renderItem={({ item, index }) => renderCardItem({ item, index, list: results })}
             ListEmptyComponent={!loading && <Text style={styles.emptyText}>Search for cards...</Text>}
             contentContainerStyle={styles.listContent}
             style={[styles.flex1, { width: '100%' }]}
@@ -903,11 +1027,17 @@ export default function BuilderView() {
               <View style={{ padding: 16 }}>
                 <View style={metaStyles.commanderRow}>
                   {ScryfallService.getImageUrl(metaCommander, 'normal') && (
-                    <Image
-                      source={{ uri: ScryfallService.getImageUrl(metaCommander, 'normal') }}
-                      style={metaStyles.commanderImage}
-                      resizeMode="contain"
-                    />
+                    <TouchableOpacity 
+                      onLongPress={() => handleOpenPreview(metaCommander, [metaCommander], 0)}
+                      onPress={() => handleOpenPreview(metaCommander, [metaCommander], 0)}
+                      activeOpacity={0.8}
+                    >
+                      <Image
+                        source={{ uri: ScryfallService.getImageUrl(metaCommander, 'normal') }}
+                        style={metaStyles.commanderImage}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
                   )}
                   <View style={metaStyles.commanderInfo}>
                     <Text style={metaStyles.commanderName}>{metaCommander.name}</Text>
@@ -921,9 +1051,30 @@ export default function BuilderView() {
                   </View>
                 </View>
 
-                <Text style={metaStyles.sectionLabel}>Trending Cards for {metaCommander.name}</Text>
+                <Text style={metaStyles.sectionLabel}>Metagame Trends for {metaCommander.name}</Text>
 
-                {metaGalleryIndex !== null && metaTopCards.length > 0 && (
+                <View style={metaStyles.categoryTabs}>
+                  {[
+                    { id: 'top', label: 'Top Cards' },
+                    { id: 'synergy', label: 'High Synergy' },
+                    { id: 'new', label: 'New Cards' }
+                  ].map(cat => (
+                    <TouchableOpacity 
+                      key={cat.id} 
+                      style={[metaStyles.categoryTab, metaCategory === cat.id && metaStyles.categoryTabActive]}
+                      onPress={() => {
+                        setMetaCategory(cat.id);
+                        setMetaGalleryIndex(0);
+                      }}
+                    >
+                      <Text style={[metaStyles.categoryTabText, metaCategory === cat.id && metaStyles.categoryTabTextActive]}>
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {metaGalleryIndex !== null && getCurrentMetaCards().length > 0 && (
                   <View style={metaStyles.galleryRow}>
                     <TouchableOpacity
                       style={[metaStyles.galleryArrow, metaGalleryIndex === 0 && { opacity: 0.2 }]}
@@ -933,42 +1084,68 @@ export default function BuilderView() {
                       <ChevronLeft color="#333" size={28} />
                     </TouchableOpacity>
 
-                    <View style={metaStyles.galleryCard}>
+                    <TouchableOpacity 
+                      style={metaStyles.galleryCard}
+                      onLongPress={() => handleOpenPreview(getCurrentMetaCards()[metaGalleryIndex], getCurrentMetaCards(), metaGalleryIndex)}
+                      onPress={() => handleOpenPreview(getCurrentMetaCards()[metaGalleryIndex], getCurrentMetaCards(), metaGalleryIndex)}
+                      activeOpacity={0.9}
+                    >
                       <Image
-                        source={{ uri: metaTopCards[metaGalleryIndex].imageUrl }}
+                        source={{ uri: getCurrentMetaCards()[metaGalleryIndex].imageUrl }}
                         style={metaStyles.galleryImage}
                         resizeMode="contain"
                       />
                       <View style={metaStyles.galleryInfo}>
-                        <Text style={metaStyles.galleryName}>{metaTopCards[metaGalleryIndex].name}</Text>
-                        <Text style={metaStyles.galleryType}>{metaTopCards[metaGalleryIndex].type_line}</Text>
-                        <Text style={metaStyles.galleryCounter}>{metaGalleryIndex + 1} / {metaTopCards.length}</Text>
+                        <Text style={metaStyles.galleryName}>{getCurrentMetaCards()[metaGalleryIndex].name}</Text>
+                        <Text style={metaStyles.galleryType}>{getCurrentMetaCards()[metaGalleryIndex].type_line}</Text>
+                        <Text style={metaStyles.galleryCounter}>{metaGalleryIndex + 1} / {getCurrentMetaCards().length}</Text>
                         <TouchableOpacity
-                          style={[metaStyles.galleryAddBtn, metaAddedNames.has(metaTopCards[metaGalleryIndex].name) && { backgroundColor: '#2d8a4e' }]}
-                          onPress={() => addMetagameCard(metaTopCards[metaGalleryIndex])}
+                          style={[metaStyles.galleryAddBtn, metaAddedNames.has(getCurrentMetaCards()[metaGalleryIndex].name) && { backgroundColor: '#2d8a4e' }]}
+                          onPress={() => addMetagameCard(getCurrentMetaCards()[metaGalleryIndex])}
                         >
-                          {metaAddedNames.has(metaTopCards[metaGalleryIndex].name)
+                          {metaAddedNames.has(getCurrentMetaCards()[metaGalleryIndex].name)
                             ? <><Check color="#fff" size={16} /><Text style={metaStyles.galleryAddText}>ADDED</Text></>
                             : <><Plus color="#fff" size={16} /><Text style={metaStyles.galleryAddText}>ADD TO DECK</Text></>
                           }
                         </TouchableOpacity>
                       </View>
-                    </View>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={[metaStyles.galleryArrow, metaGalleryIndex === metaTopCards.length - 1 && { opacity: 0.2 }]}
-                      onPress={() => setMetaGalleryIndex(i => Math.min(metaTopCards.length - 1, i + 1))}
-                      disabled={metaGalleryIndex === metaTopCards.length - 1}
+                      style={[metaStyles.galleryArrow, metaGalleryIndex === getCurrentMetaCards().length - 1 && { opacity: 0.2 }]}
+                      onPress={() => setMetaGalleryIndex(i => Math.min(getCurrentMetaCards().length - 1, i + 1))}
+                      disabled={metaGalleryIndex === getCurrentMetaCards().length - 1}
                     >
                       <ChevronRight color="#333" size={28} />
                     </TouchableOpacity>
                   </View>
                 )}
 
+                <View style={{ alignItems: 'center', marginTop: 8, marginBottom: 16 }}>
+                  <TouchableOpacity 
+                    style={[metaStyles.sortBtn, metaSortMode === 'type' && metaStyles.sortBtnActive]} 
+                    onPress={() => {
+                        setMetaSortMode(prev => prev === 'rank' ? 'type' : 'rank');
+                        setMetaGalleryIndex(0); 
+                    }}
+                  >
+                    <Filter color={metaSortMode === 'type' ? '#fff' : '#666'} size={14} style={{ marginRight: 6 }} />
+                    <Text style={[metaStyles.sortBtnText, metaSortMode === 'type' && metaStyles.sortBtnTextActive]}>
+                      {metaSortMode === 'type' ? 'Sorted by Type' : 'Sort by Type'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
                 <View style={metaStyles.cardGrid}>
-                  {metaTopCards.map((card, i) => (
+                  {getCurrentMetaCards().map((card, i) => (
                     <View key={i} style={metaStyles.cardCell}>
-                      <TouchableOpacity onPress={() => setMetaGalleryIndex(i)}>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setMetaGalleryIndex(i);
+                          handleOpenPreview(card, getCurrentMetaCards(), i);
+                        }}
+                        onLongPress={() => handleOpenPreview(card, getCurrentMetaCards(), i)}
+                      >
                         <Image
                           source={{ uri: card.imageUrl }}
                           style={[metaStyles.cardImage, metaGalleryIndex === i && metaStyles.cardImageSelected]}
@@ -1014,11 +1191,31 @@ export default function BuilderView() {
           <View style={styles.previewContainer}>
             {previewCard && (
               <>
-                <Image 
-                  source={{ uri: ScryfallService.getImageUrl(previewCard, 'normal') }} 
-                  style={styles.previewImage} 
-                  resizeMode="contain" 
-                />
+                <View style={styles.previewImageWrapper}>
+                  {previewList && previewList.length > 1 && (
+                    <TouchableOpacity 
+                      style={[styles.previewNavArrow, styles.previewNavArrowLeft]} 
+                      onPress={(e) => { e.stopPropagation(); navigatePreview(-1); }}
+                    >
+                      <ChevronLeft color="#fff" size={40} />
+                    </TouchableOpacity>
+                  )}
+
+                  <Image 
+                    source={{ uri: ScryfallService.getImageUrl(previewCard, 'normal') }} 
+                    style={styles.previewImage} 
+                    resizeMode="contain" 
+                  />
+
+                  {previewList && previewList.length > 1 && (
+                    <TouchableOpacity 
+                      style={[styles.previewNavArrow, styles.previewNavArrowRight]} 
+                      onPress={(e) => { e.stopPropagation(); navigatePreview(1); }}
+                    >
+                      <ChevronRight color="#fff" size={40} />
+                    </TouchableOpacity>
+                  )}
+                </View>
                 
                 <View style={styles.printSelectorContainer}>
                   <Text style={styles.printSelectorTitle}>ALTERNATE PRINTINGS</Text>
@@ -1557,9 +1754,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  previewImage: {
+  previewImageWrapper: {
     width: '100%',
     height: '65%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewNavArrow: {
+    position: 'absolute',
+    zIndex: 100,
+    padding: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewNavArrowLeft: {
+    left: Platform.OS === 'web' ? -60 : -10,
+  },
+  previewNavArrowRight: {
+    right: Platform.OS === 'web' ? -60 : -10,
   },
   printSelectorContainer: {
     width: '100%',
@@ -1747,6 +1967,7 @@ const metaStyles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
     paddingTop: 8,
+    justifyContent: 'center',
   },
   cardCell: {
     width: 100,
@@ -1828,5 +2049,51 @@ const metaStyles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: '900',
+  },
+  sortBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  sortBtnActive: {
+    backgroundColor: '#b30000',
+    borderColor: '#b30000',
+  },
+  sortBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#666',
+  },
+  sortBtnTextActive: {
+    color: '#fff',
+  },
+  categoryTabs: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  categoryTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 4,
+  },
+  categoryTabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#b30000',
+  },
+  categoryTabText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#999',
+    textTransform: 'uppercase',
+  },
+  categoryTabTextActive: {
+    color: '#b30000',
   },
 });

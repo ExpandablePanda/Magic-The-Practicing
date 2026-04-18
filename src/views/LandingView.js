@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { Play, PlusSquare, BarChart2, ChevronRight } from 'lucide-react-native';
+import { Play, Wrench, BarChart2, ChevronRight, Heart } from 'lucide-react-native';
 
-export default function LandingView({ onStartPlay, onOpenBuilder }) {
+export default function LandingView({ onStartPlay, onOpenBuilder, onOpenLiveGame, onOpenStats }) {
   return (
     <View style={styles.container}>
       <View style={styles.headerSection}>
@@ -26,14 +26,40 @@ export default function LandingView({ onStartPlay, onOpenBuilder }) {
           <ChevronRight color="#ccc" size={20} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={onOpenBuilder}>
+        <TouchableOpacity style={styles.primaryButton} onPress={onOpenBuilder}>
           <View style={styles.buttonLeft}>
             <View style={[styles.iconCircle, styles.secondaryIcon]}>
-              <PlusSquare color="#666" size={20} />
+              <Wrench color="#666" size={20} />
             </View>
             <View>
               <Text style={styles.rowText}>Deck Builder</Text>
               <Text style={styles.buttonSubtext}>Search & manage cards</Text>
+            </View>
+          </View>
+          <ChevronRight color="#ccc" size={20} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={onOpenLiveGame}>
+          <View style={styles.buttonLeft}>
+            <View style={[styles.iconCircle, styles.secondaryIcon]}>
+              <Heart color="#666" size={20} />
+            </View>
+            <View>
+              <Text style={styles.rowText}>Live Game</Text>
+              <Text style={styles.buttonSubtext}>Track life & counters</Text>
+            </View>
+          </View>
+          <ChevronRight color="#ccc" size={20} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={onOpenStats}>
+          <View style={styles.buttonLeft}>
+            <View style={[styles.iconCircle, styles.secondaryIcon]}>
+              <BarChart2 color="#666" size={20} />
+            </View>
+            <View>
+              <Text style={styles.rowText}>Stats</Text>
+              <Text style={styles.buttonSubtext}>Detailed deck analytics</Text>
             </View>
           </View>
           <ChevronRight color="#ccc" size={20} />

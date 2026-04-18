@@ -116,10 +116,12 @@ export default function App() {
   return (
     <WebShell>
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.brand}>Magic: The <Text style={styles.brandRed}>Practicing</Text></Text>
-          <Text style={styles.versionInside}>{APP_VERSION}</Text>
-        </View>
+        {currentView !== 'play' && (
+          <View style={styles.header}>
+            <Text style={styles.brand}>Magic: The <Text style={styles.brandRed}>Practicing</Text></Text>
+            <Text style={styles.versionInside}>{APP_VERSION}</Text>
+          </View>
+        )}
 
         <View style={styles.content}>
           {renderView()}

@@ -1209,6 +1209,31 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                     <RefreshCcw color="#b30000" size={20} />
                   </TouchableOpacity>
                 </View>
+
+                {/* Inline Global Effects */}
+                <View style={styles.headerDivider} />
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {emblems.map((emb, idx) => (
+                    <TouchableOpacity key={idx} style={styles.emblemChipHeader} onLongPress={() => {
+                      setEmblems(prev => prev.filter((_, i) => i !== idx));
+                    }}>
+                      <Text style={styles.emblemTextHeader}>{emb.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity style={styles.addEmblemBtnHeader} onPress={() => {
+                    if (Platform.OS === 'web') {
+                      const name = window.prompt('New Global Effect', '');
+                      if (name) setEmblems(prev => [...prev, { name }]);
+                    } else {
+                      Alert.prompt('New Global Effect', 'Enter name (e.g. Emblem, Engine, City\'s Blessing):', (name) => {
+                        if (name) setEmblems(prev => [...prev, { name }]);
+                      });
+                    }
+                  }}>
+                    <Plus color="#999" size={14} />
+                    <Text style={styles.addEmblemTextHeader}>EFFECT</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </ScrollView>
 
@@ -1314,37 +1339,6 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
             </View>
           </View>
 
-          {/* Battlefield */}
-          {/* Header Info Banner / Global Effects */}
-      <View style={styles.utilityBanner}>
-        <View style={styles.turnIndicator}>
-          <Text style={styles.turnLabel}>TURN</Text>
-          <Text style={styles.turnVal}>{turnNumber}</Text>
-        </View>
-        
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.emblemScroll}>
-          {emblems.map((emb, idx) => (
-            <TouchableOpacity key={idx} style={styles.emblemChip} onLongPress={() => {
-              setEmblems(prev => prev.filter((_, i) => i !== idx));
-            }}>
-              <Text style={styles.emblemText}>{emb.name}</Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity style={styles.addEmblemBtn} onPress={() => {
-            if (Platform.OS === 'web') {
-              const name = window.prompt('New Global Effect', '');
-              if (name) setEmblems(prev => [...prev, { name }]);
-            } else {
-              Alert.prompt('New Global Effect', 'Enter name (e.g. Emblem, Engine, City\'s Blessing):', (name) => {
-                if (name) setEmblems(prev => [...prev, { name }]);
-              });
-            }
-          }}>
-            <Plus color="#999" size={14} />
-            <Text style={styles.addEmblemText}>ADD EFFECT</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
 
       <View style={styles.battlefieldContainer}>
             {shuffleToast && (
@@ -2608,69 +2602,46 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#1a1a1a',
   },
-  utilityBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    gap: 15,
-  },
-  turnIndicator: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  turnLabel: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: '#999',
-    letterSpacing: 1,
-  },
   turnVal: {
     fontSize: 18,
     fontWeight: '900',
     color: '#1a1a1a',
   },
-  emblemScroll: {
-    flex: 1,
+  headerDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#eee',
+    marginHorizontal: 5,
   },
-  emblemChip: {
+  emblemChipHeader: {
     backgroundColor: '#fff8e1',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 15,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#ff8f00',
-    marginRight: 8,
-    height: 30,
+    marginRight: 6,
     justifyContent: 'center',
   },
-  emblemText: {
-    fontSize: 10,
+  emblemTextHeader: {
+    fontSize: 9,
     fontWeight: '900',
     color: '#ff8f00',
     letterSpacing: 0.5,
   },
-  addEmblemBtn: {
+  addEmblemBtnHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#eee',
     borderStyle: 'dashed',
-    height: 30,
   },
-  addEmblemText: {
-    fontSize: 9,
+  addEmblemTextHeader: {
+    fontSize: 8,
     fontWeight: '900',
     color: '#999',
   },

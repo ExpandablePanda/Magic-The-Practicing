@@ -116,8 +116,9 @@ export default function App() {
   return (
     <WebShell>
       <SafeAreaView style={styles.container}>
-        <View style={styles.versionBar}>
-          <Text style={styles.version}>{APP_VERSION}</Text>
+        <View style={styles.header}>
+           <Text style={styles.brand}>Magic: The <Text style={styles.brandRed}>Practicing</Text></Text>
+           <Text style={styles.versionInside}>{APP_VERSION}</Text>
         </View>
 
         <View style={styles.content}>
@@ -180,16 +181,27 @@ const styles = StyleSheet.create({
   brandRed: {
     color: '#b30000',
   },
-  versionBar: {
-    position: 'absolute',
-    top: Platform.OS === 'web' ? 12 : 45,
-    right: 28,
-    zIndex: 1000,
+  header: {
+    paddingHorizontal: 25,
+    paddingTop: 15,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  version: {
-    fontSize: 11,
-    color: '#bbb',
-    fontWeight: '500',
+  brand: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#1a1a1a',
+    letterSpacing: -1,
+  },
+  brandRed: {
+    color: '#b30000',
+  },
+  versionInside: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#ccc',
     letterSpacing: 0.5,
   },
   content: {

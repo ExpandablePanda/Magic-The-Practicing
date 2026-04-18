@@ -1045,7 +1045,10 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     setCommanderTax(0);
     setCurrentNotes(fullDeckData.notes || '');
     setHistory([]);
-    setTurnNumber(1); // FIX: Reset turn to 1
+    setTurnNumber(1); 
+    setMulliganCount(0);
+    setShowMulliganModal(false);
+    setBottomingState(null);
     
     // Reshuffle library
     let deckCards = fullDeckData.cards.map(c => prepareCard(c));
@@ -1353,30 +1356,42 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
               </ScrollView>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.handList}>
                 {hand.map((card, index) => (
-                  <TouchableOpacity
-                    key={card.instanceId}
+                  <TouchableOpacity 
+                    key={card.instanceId} 
+                    style={[
+                      styles.handCardItem,
+                      selectedHandId === card.instanceId && styles.handCardItemSelected
+                    ]}
                     onPress={() => selectFromHand(card.instanceId)}
-                    onLongPress={() => {
-                      if (hand.length > 7) {
-                        Alert.alert(
-                          `Discard ${card.name}?`,
-                          'Send this card to the graveyard to reduce hand size.',
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Discard', style: 'destructive', onPress: () => {
-                              pushHistory();
-                              setHand(prev => prev.filter(c => c.instanceId !== card.instanceId));
-                              setGraveyard(prev => [card, ...prev]);
-                            }},
-                          ]
-                        );
-                      } else {
-                        openGallery(hand, card);
-                      }
-                    }}
-                    style={[styles.handCardWrapper, selectedHandId === card.instanceId && styles.selectedHandCard, hand.length > 7 && styles.discardableCard]}
                   >
-                    <Image source={{ uri: ScryfallService.getImageUrl(card, 'small') }} style={styles.handCard} resizeMode="contain" />
+                    <Image 
+                      source={{ uri: ScryfallService.getImageUrl(card, 'small') }} 
+                      style={styles.handCardImage} 
+                      resizeMode="contain" 
+                    />
+                    
+                    {selectedHandId === card.instanceId && (
+                      <View style={styles.handCardMenu}>
+                        <TouchableOpacity 
+                          style={styles.hMenuBtn} 
+                          onPress={(e) => { e.stopPropagation(); openGallery(hand, card); }}
+                        >
+                          <Text style={styles.hMenuText}>ZOOM</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.hMenuBtn, { backgroundColor: '#b30000' }]} 
+                          onPress={(e) => { e.stopPropagation(); playCard(card.instanceId); }}
+                        >
+                          <Text style={[styles.hMenuText, { color: '#fff' }]}>PLAY</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.hMenuBtn, { backgroundColor: '#333' }]} 
+                          onPress={(e) => { e.stopPropagation(); moveCard(card.instanceId, 'hand', 'graveyard'); }}
+                        >
+                          <Text style={[styles.hMenuText, { color: '#fff' }]}>DISCARD</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     {hand.length > 7 && (
                       <View style={styles.discardBadge}>
                         <Text style={styles.discardBadgeText}>HOLD</Text>
@@ -1736,30 +1751,27 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                 <View style={styles.ptDualRow}>
                    <View style={styles.ptInputContainer}>
                      <Text style={styles.ptInputLabel}>POWER</Text>
-                     <TextInput 
-                       style={styles.ptActionInput}
-                       keyboardType="numeric"
-                       value={pendingToken.p !== null ? String(pendingToken.p) : ''}
-                       onChangeText={val => setPendingToken(prev => ({ ...prev, p: val }))}
-                       placeholder="0"
-                       placeholderTextColor="#eee"
-                       autoFocus
-                       returnKeyType="done"
-                       onSubmitEditing={() => Keyboard.dismiss()}
-                     />
+                     <View style={styles.ptStepper}>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: (parseInt(prev.p) || 0) - 1 }))}>
+                          <Minus color="#b30000" size={18} />
+                        </TouchableOpacity>
+                        <Text style={styles.stepperVal}>{pendingToken.p ?? 0}</Text>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: (parseInt(prev.p) || 0) + 1 }))}>
+                          <Plus color="#b30000" size={18} />
+                        </TouchableOpacity>
+                     </View>
                    </View>
                    <View style={styles.ptInputContainer}>
                      <Text style={styles.ptInputLabel}>TOUGHNESS</Text>
-                     <TextInput 
-                       style={styles.ptActionInput}
-                       keyboardType="numeric"
-                       value={pendingToken.t !== null ? String(pendingToken.t) : ''}
-                       onChangeText={val => setPendingToken(prev => ({ ...prev, t: val }))}
-                       placeholder="0"
-                       placeholderTextColor="#eee"
-                       returnKeyType="done"
-                       onSubmitEditing={() => Keyboard.dismiss()}
-                     />
+                     <View style={styles.ptStepper}>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: (parseInt(prev.t) || 0) - 1 }))}>
+                          <Minus color="#b30000" size={18} />
+                        </TouchableOpacity>
+                        <Text style={styles.stepperVal}>{pendingToken.t ?? 0}</Text>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: (parseInt(prev.t) || 0) + 1 }))}>
+                          <Plus color="#b30000" size={18} />
+                        </TouchableOpacity>
+                     </View>
                    </View>
                 </View>
 
@@ -1801,36 +1813,42 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                 </TouchableOpacity>
               </View>
             ) : tokenStep === 5 ? (
-              <View style={styles.artPickerContainer}>
+              <View style={[styles.artPickerContainer, { flex: 1 }]}>
                 <Text style={styles.artPickerSubtitle}>CHOOSE ART FOR {pendingToken.name.toUpperCase()}</Text>
-                {loadingTokenArt ? (
-                  <ActivityIndicator color="#b30000" size="large" style={{ margin: 40 }} />
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.artList}>
-                    {tokenArtOptions.length > 0 ? tokenArtOptions.map((print, idx) => (
-                      <TouchableOpacity key={idx} style={styles.artOption} onPress={() => {
-                        const img = ScryfallService.getImageUrl(print);
-                        spawnTokens(tokenQuantity, img, pendingToken.abilities);
-                        // Save to quick spawn
-                        if (!savedTokens.some(s => s.name === pendingToken.name && s.p === pendingToken.p && s.t === pendingToken.t)) {
-                           setSavedTokens(prev => [{ ...pendingToken, url: img, isHearted: false }, ...prev].slice(0, 10));
-                        }
-                        setShowTokenModal(false);
-                      }}>
-                        <Image source={{ uri: ScryfallService.getImageUrl(print, 'small') }} style={styles.artThumb} />
-                        <Text style={styles.artSetName}>{print.set_name}</Text>
-                      </TouchableOpacity>
-                    )) : (
-                      <TouchableOpacity style={styles.artOption} onPress={() => {
-                        spawnTokens(tokenQuantity, null, pendingToken.abilities);
-                        setShowTokenModal(false);
-                      }}>
-                        <View style={[styles.artThumb, {backgroundColor: '#eee', justifyContent:'center', alignItems:'center'}]}><LayoutGrid color="#ccc" /></View>
-                        <Text style={styles.artSetName}>Default Art</Text>
-                      </TouchableOpacity>
-                    )}
-                  </ScrollView>
-                )}
+                <View style={{ flex: 1, minHeight: 180 }}>
+                  {loadingTokenArt ? (
+                    <ActivityIndicator color="#b30000" size="large" style={{ margin: 40 }} />
+                  ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.artList}>
+                      {tokenArtOptions.length > 0 ? tokenArtOptions.map((print, idx) => (
+                        <TouchableOpacity key={idx} style={styles.artOption} onPress={() => {
+                          const img = ScryfallService.getImageUrl(print);
+                          spawnTokens(tokenQuantity, img, pendingToken.abilities);
+                          // Save to quick spawn bank
+                          if (!savedTokens.some(s => s.name === pendingToken.name && s.p === pendingToken.p && s.t === pendingToken.t)) {
+                             setSavedTokens(prev => [{ ...pendingToken, url: img, isHearted: false }, ...prev].slice(0, 15));
+                          }
+                          setShowTokenModal(false);
+                          setTokenStep(1);
+                        }}>
+                          <Image source={{ uri: ScryfallService.getImageUrl(print, 'small') }} style={styles.artThumb} />
+                          <View style={styles.artLabelBox}>
+                            <Text style={styles.artSetName} numberOfLines={1}>{print.set_name}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )) : (
+                        <TouchableOpacity style={styles.artOption} onPress={() => {
+                          spawnTokens(tokenQuantity, null, pendingToken.abilities);
+                          setShowTokenModal(false);
+                          setTokenStep(1);
+                        }}>
+                          <View style={[styles.artThumb, {backgroundColor: '#eee', justifyContent:'center', alignItems:'center'}]}><LayoutGrid color="#ccc" /></View>
+                          <Text style={styles.artSetName}>Default Art</Text>
+                        </TouchableOpacity>
+                      )}
+                    </ScrollView>
+                  )}
+                </View>
                 <TouchableOpacity onPress={() => setTokenStep(4)} style={styles.backToTypesBtn}>
                   <Text style={styles.backToTypesText}>BACK TO ABILITIES</Text>
                 </TouchableOpacity>
@@ -4094,5 +4112,64 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#999',
     textTransform: 'uppercase',
+  },
+  ptStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  stepperBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fff2f2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ffdcdc',
+  },
+  stepperVal: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#333',
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  handCardMenu: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+  },
+  hMenuBtn: {
+    backgroundColor: '#fff',
+    width: '100%',
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  hMenuText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#333',
+    letterSpacing: 0.5,
+  },
+  artLabelBox: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
   },
 });

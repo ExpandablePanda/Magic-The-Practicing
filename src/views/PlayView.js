@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Image, FlatList, Modal, Pressable, Alert, Dimensions, ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback } from 'react-native';
-import { Heart, Plus, Minus, User, RefreshCcw, LayoutGrid, ArrowLeft, ChevronLeft, ChevronRight, Layers, Circle, Trash2, XCircle, Sword, RotateCcw, Zap, RotateCw, UserPlus, FileText, CheckCircle } from 'lucide-react-native';
+import { Heart, Plus, Minus, User, RefreshCcw, LayoutGrid, ArrowLeft, ChevronLeft, ChevronRight, Layers, Circle, Trash2, XCircle, X, Sword, RotateCcw, Zap, RotateCw, UserPlus, FileText, CheckCircle } from 'lucide-react-native';
 import { StorageService } from '../services/storage';
 import { ScryfallService, CARD_BACK_URL } from '../services/scryfall';
 
@@ -350,29 +350,17 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
   const getAvailableMana = () => {
     const counts = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
     
-    const untappedSources = battlefield.filter(c => {
-      if (c.isTapped) return false;
-      
-      const type = c.type_line || '';
-      const text = (c.oracle_text || '').toLowerCase();
-      const name = (c.name || '').toLowerCase();
-
-      // Lands always count
-      if (type.includes('Land')) return true;
-
-      // Non-lands (Artifacts/Creatures) only count if they have a mana ability
-      const hasManaAbility = 
-        text.includes('add ') || 
-        text.includes('{w}') || text.includes('{u}') || text.includes('{b}') || 
-        text.includes('{r}') || text.includes('{g}') || text.includes('{c}') ||
-        name.includes('sol ring') || name.includes('mana crypt') || name.includes('mox');
-
-      return hasManaAbility;
-    });
+    // ONLY count untapped colored lands as automatic potential mana
+    // Colorless lands ('C') now require manual interaction as requested
+    const untappedLands = battlefield.filter(c => 
+      c.type_line?.includes('Land') && !c.isTapped
+    );
     
-    untappedSources.forEach(source => {
+    untappedLands.forEach(source => {
       const color = identifyManaColor(source);
-      counts[color] += (source.quantity || 1);
+      if (color !== 'C') {
+        counts[color] += (source.quantity || 1);
+      }
     });
     
     return counts;
@@ -953,7 +941,12 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     if (!activeQuantityAction) return;
     const { action, card } = activeQuantityAction;
     
-    executeActionOnQuantity(card, qty, action);
+    if (action === 'SPAWN') {
+      spawnTokens(qty, card.url, card.abilities || [], { name: card.name, p: card.p, t: card.t });
+      setShowTokenModal(false);
+    } else {
+      executeActionOnQuantity(card, qty, action);
+    }
     setActiveQuantityAction(null);
   };
 
@@ -1249,15 +1242,19 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
               {fullDeckData?.commander && (
                 <View style={styles.stockItem}>
                   <TouchableOpacity 
-                    style={[styles.zoneBox, selectedCommanderZone && styles.selectedCommanderZone]} 
+                    style={[
+                      styles.zoneBox, 
+                      isCommanderSelected && { borderColor: '#a855f7', borderWidth: 2, backgroundColor: '#a855f722' }
+                    ]} 
                     onPress={() => {
-                      if (selectedCommanderZone) {
-                        setCommanderLocation(selectedCommanderZone);
-                        setSelectedCommanderZone(null);
+                      if (commanderLocation === 'command') {
+                        setIsCommanderSelected(!isCommanderSelected);
+                        setSelectedHandId(null); // Deselect hand cards if any
                       } else {
                         setShowCommanderMenu(true);
                       }
                     }}
+                    onLongPress={() => openGallery([fullDeckData.commander], fullDeckData.commander)}
                   >
                     <Image source={{ uri: fullDeckData.commander.image_uris?.small || fullDeckData.commander.image_uris?.normal }} style={styles.commanderThumb} />
                     <View style={styles.zoneBadge}>
@@ -1316,11 +1313,15 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
         
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.emblemScroll}>
           {emblems.map((emb, idx) => (
-            <TouchableOpacity key={idx} style={styles.emblemChip} onLongPress={() => {
-              setEmblems(prev => prev.filter((_, i) => i !== idx));
-            }}>
+            <View key={idx} style={styles.emblemChip}>
               <Text style={styles.emblemText}>{emb.name}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setEmblems(prev => prev.filter((_, i) => i !== idx))}
+                style={styles.emblemDelete}
+              >
+                <X color="#999" size={10} />
+              </TouchableOpacity>
+            </View>
           ))}
           <TouchableOpacity style={styles.addEmblemBtn} onPress={() => {
             if (Platform.OS === 'web') {
@@ -1438,7 +1439,12 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                 <TouchableOpacity
                   style={[styles.mulliganChipBtn, styles.mulliganChipKeep, { backgroundColor: '#2d8a4e' }]}
                   onPress={() => {
-                    setBottomingState({ required: mulliganCount, selected: new Set(), hand: [...hand], library: [...library] });
+                    const required = Math.max(0, mulliganCount - 1);
+                    if (required === 0) {
+                      setMulliganCount(0); // Finished!
+                    } else {
+                      setBottomingState({ required, selected: new Set(), hand: [...hand], library: [...library] });
+                    }
                   }}
                 >
                   <Text style={[styles.mulliganChipBtnText, { color: '#fff' }]}>KEEP HAND</Text>
@@ -1685,11 +1691,11 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
       <Modal visible={showTokenModal} transparent animationType="slide">
         <Pressable style={styles.modalOverlay}>
           <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 10}
+            behavior={null} 
+            keyboardVerticalOffset={0}
             style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}
           >
-                  <View style={[styles.counterModalContent, { maxHeight: '90%' }]}>
+                  <View style={[styles.counterModalContent, { minHeight: tokenStep === 1 ? 430 : 650, maxHeight: '90%' }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                   <Text style={styles.modalTitle}>SPAWN TOKENS</Text>
                   <TouchableOpacity onPress={() => { setShowTokenModal(false); setTokenStep(1); }}>
@@ -1718,7 +1724,9 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                               <TouchableOpacity 
                                 style={styles.savedTokenBtn}
                                 onPress={() => {
-                                  spawnTokens(tokenQuantity, st.url, st.abilities, { name: st.name, p: st.p, t: st.t });
+                                  setShowTokenModal(false);
+                                  setModalQuantity(1);
+                                  setActiveQuantityAction({ action: 'SPAWN', card: st, max: 999 });
                                 }}
                               >
                                  <View style={styles.savedTokenIcon}>
@@ -1916,7 +1924,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                   ) : tokenStep === 5 ? (
                     <View style={[styles.artPickerContainer, { flex: 1 }]}>
                       <Text style={styles.artPickerSubtitle}>CHOOSE ART FOR {pendingToken.name.toUpperCase()}</Text>
-                      <View style={{ height: 160 }}>
+                      <View style={{ height: 180, width: '100%' }}>
                         {loadingTokenArt ? (
                           <ActivityIndicator color="#b30000" size="large" style={{ margin: 40 }} />
                         ) : (
@@ -2081,16 +2089,24 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
 
       {/* Selective Action Quantity Modal */}
       <Modal visible={!!activeQuantityAction} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setActiveQuantityAction(null)}>
+        <Pressable style={styles.modalOverlay} onPress={() => {
+          if (activeQuantityAction?.action === 'SPAWN') setShowTokenModal(true);
+          setActiveQuantityAction(null);
+          setModalQuantity(1);
+        }}>
           <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'web' ? null : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 25}
             style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}
           >
             <Pressable style={styles.counterModalContent} onPress={(e) => e.stopPropagation()}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <Text style={styles.modalTitle}>{activeQuantityAction?.action} QUANTITY</Text>
-              <TouchableOpacity onPress={() => setActiveQuantityAction(null)}>
+              <TouchableOpacity onPress={() => {
+                if (activeQuantityAction?.action === 'SPAWN') setShowTokenModal(true);
+                setActiveQuantityAction(null);
+                setModalQuantity(1);
+              }}>
                 <XCircle color="#333" size={24} />
               </TouchableOpacity>
             </View>
@@ -2103,7 +2119,17 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                 <TouchableOpacity onPress={() => setModalQuantity(Math.max(1, modalQuantity - 1))} style={styles.qtyBtn}>
                   <Minus color="#333" size={20} />
                 </TouchableOpacity>
-                <Text style={styles.qtyVal}>{modalQuantity}</Text>
+                <TextInput 
+                  style={styles.qtyInput}
+                  keyboardType="numeric"
+                  value={String(modalQuantity)}
+                  onChangeText={(val) => {
+                    const n = parseInt(val.replace(/[^0-9]/g, '')) || 0;
+                    setModalQuantity(Math.min(activeQuantityAction?.max || 999, n));
+                  }}
+                  selectTextOnFocus
+                  returnKeyType="done"
+                />
                 <TouchableOpacity onPress={() => setModalQuantity(Math.min(activeQuantityAction?.max || 1, modalQuantity + 1))} style={styles.qtyBtn}>
                   <Plus color="#333" size={20} />
                 </TouchableOpacity>
@@ -2693,6 +2719,12 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     gap: 6,
+  },
+  emblemDelete: {
+    marginLeft: 6,
+    padding: 2,
+    backgroundColor: '#ffffff11',
+    borderRadius: 8,
   },
   emblemText: {
     fontSize: 10,
@@ -3501,17 +3533,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   counterModalContent: {
-    width: SCREEN_WIDTH > 500 ? 500 : '90%',
-    height: SCREEN_HEIGHT * 0.8,
     backgroundColor: '#fff',
-    borderRadius: 32,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
+    width: SCREEN_WIDTH * 0.9,
     overflow: 'hidden',
-    elevation: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 20,
+    elevation: 10,
   },
   modalTitle: {
     fontSize: 12,
@@ -3958,7 +3989,8 @@ const styles = StyleSheet.create({
   artPickerContainer: {
     width: '100%',
     alignItems: 'center',
-    flex: 1,
+    paddingVertical: 10,
+    marginHorizontal: -24, // Break out of modal padding
   },
   artPickerSubtitle: {
     fontSize: 9,
@@ -3968,14 +4000,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   artList: {
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    gap: 10,
+    flexDirection: 'row',
     alignItems: 'center',
-    minWidth: '100%',
-    ...(Platform.OS === 'web' ? { WebkitOverflowScrolling: 'touch' } : {}),
+    paddingLeft: 40,
+    paddingRight: 120, // Extra large padding to ensure final items are reachable
+    gap: 15,
+    ...(Platform.OS === 'web' ? { overflowX: 'auto', WebkitOverflowScrolling: 'touch' } : {}),
   },
-
   artOption: {
     alignItems: 'center',
     marginHorizontal: 6,
@@ -4444,12 +4475,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffdcdc',
   },
-  stepperVal: {
-    fontSize: 32,
+  qtyInput: {
+    fontSize: 24,
     fontWeight: '900',
     color: '#333',
-    minWidth: 40,
+    minWidth: 60,
     textAlign: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 8,
+    borderRadius: 8,
+    marginHorizontal: 15,
   },
   handCardMenu: {
     position: 'absolute',

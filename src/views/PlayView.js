@@ -349,9 +349,26 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
 
   const getAvailableMana = () => {
     const counts = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
-    const untappedSources = battlefield.filter(c => 
-      (c.type_line?.includes('Land') || c.type_line?.includes('Artifact')) && !c.isTapped
-    );
+    
+    const untappedSources = battlefield.filter(c => {
+      if (c.isTapped) return false;
+      
+      const type = c.type_line || '';
+      const text = (c.oracle_text || '').toLowerCase();
+      const name = (c.name || '').toLowerCase();
+
+      // Lands always count
+      if (type.includes('Land')) return true;
+
+      // Non-lands (Artifacts/Creatures) only count if they have a mana ability
+      const hasManaAbility = 
+        text.includes('add ') || 
+        text.includes('{w}') || text.includes('{u}') || text.includes('{b}') || 
+        text.includes('{r}') || text.includes('{g}') || text.includes('{c}') ||
+        name.includes('sol ring') || name.includes('mana crypt') || name.includes('mox');
+
+      return hasManaAbility;
+    });
     
     untappedSources.forEach(source => {
       const color = identifyManaColor(source);

@@ -179,7 +179,13 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     setLandsPlayedThisTurn(0);
     setCommanderTax(0);
     setCurrentNotes(deckObj.notes || '');
-    
+    setMulliganCount(0);
+    setHasPlayedCardThisTurn(false);
+    setBottomingState(null);
+    setShowMulliganModal(false);
+    setTurnNumber(1);
+    setHistory([]);
+
     setMyLife(isEDH ? 40 : 20);
     setOppLife(isEDH ? 40 : 20);
     setPoisonCounters(0);
@@ -819,7 +825,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     setLoadingTokenArt(false);
   };
 
-  const spawnTokens = (count = 1, customArt = null) => {
+  const spawnTokens = (count = 1, customArt = null, abilities = []) => {
     if (!tokenTypeToSpawn) return;
     pushHistory();
     const { name, p, t } = tokenTypeToSpawn;
@@ -828,10 +834,13 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     const isArtifactToken = artifactTokens.includes(name);
     const tokenSick = !isArtifactToken;
 
+    // Construct name with abilities if present
+    const fullName = abilities.length > 0 ? `${name} (${abilities.join(', ')})` : name;
+
     // Check if an identical token stack already exists (STRICT: state must match)
     const existingIdx = battlefield.findIndex(c =>
       c.isToken &&
-      c.name === name &&
+      c.name === fullName &&
       c.image_uris?.normal === artUrl &&
       !c.isTapped &&
       c.hasSickness === tokenSick &&
@@ -847,9 +856,9 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     } else {
       const newToken = {
         instanceId: `token-${Math.random().toString(36).slice(2, 11)}`,
-        name,
-        power: p.toString(),
-        toughness: t.toString(),
+        name: fullName,
+        power: p !== null ? p.toString() : null,
+        toughness: t !== null ? t.toString() : null,
         baseP: p,
         baseT: t,
         type_line: isArtifactToken ? 'Token Artifact' : 'Token Creature',
@@ -858,7 +867,8 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
         hasSickness: tokenSick,
         isToken: true,
         image_uris: { normal: artUrl, small: artUrl },
-        quantity: count
+        quantity: count,
+        abilities: abilities
       };
       setBattlefield(prev => [newToken, ...prev]);
     }
@@ -1356,17 +1366,18 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
               </ScrollView>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.handList}>
                 {hand.map((card, index) => (
-                  <TouchableOpacity 
-                    key={card.instanceId} 
+                  <TouchableOpacity
+                    key={card.instanceId}
                     style={[
-                      styles.handCardItem,
-                      selectedHandId === card.instanceId && styles.handCardItemSelected
+                      styles.handCardWrapper,
+                      selectedHandId === card.instanceId && styles.selectedHandCard
                     ]}
                     onPress={() => selectFromHand(card.instanceId)}
+                    onContextMenu={(e) => e && e.preventDefault && e.preventDefault()}
                   >
                     <Image 
                       source={{ uri: ScryfallService.getImageUrl(card, 'small') }} 
-                      style={styles.handCardImage} 
+                      style={styles.handCard} 
                       resizeMode="contain" 
                     />
                     
@@ -1525,18 +1536,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                 <TouchableOpacity onPress={() => setActiveCounter({...activeCounter, count: Math.max(1, activeCounter.count-1)})} style={styles.qtyBtn}>
                   <Minus color="#333" size={20} />
                 </TouchableOpacity>
-                <TextInput 
-                  style={styles.qtyVal}
-                  keyboardType="numeric"
-                  value={String(activeCounter.count)}
-                  onChangeText={(val) => {
-                    const num = parseInt(val) || 0;
-                    setActiveCounter({...activeCounter, count: num});
-                  }}
-                  selectTextOnFocus
-                  returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
-                />
+                <Text style={styles.qtyVal}>{activeCounter.count}</Text>
                 <TouchableOpacity onPress={() => setActiveCounter({...activeCounter, count: Math.min(10, activeCounter.count+1)})} style={styles.qtyBtn}>
                   <Plus color="#333" size={20} />
                 </TouchableOpacity>
@@ -1565,8 +1565,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
             keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 10}
             style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}
           >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={styles.counterModalContent}>
+                  <View style={[styles.counterModalContent, { maxHeight: '90%' }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                   <Text style={styles.modalTitle}>SPAWN TOKENS</Text>
                   <TouchableOpacity onPress={() => { setShowTokenModal(false); setTokenStep(1); }}>
@@ -1574,39 +1573,28 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                   </TouchableOpacity>
                 </View>
 
-                <View style={[styles.quantityRow, { marginBottom: 20 }]}>
-                  <Text style={styles.qtyLabel}>QUANTITY:</Text>
-                  <View style={styles.qtyControls}>
-                    <TouchableOpacity onPress={() => setTokenQuantity(Math.max(1, tokenQuantity - 1))} style={styles.qtyBtn}>
-                      <Minus color="#333" size={20} />
-                    </TouchableOpacity>
-                    <TextInput 
-                      style={styles.qtyVal}
-                      keyboardType="numeric"
-                      value={String(tokenQuantity)}
-                      onChangeText={(val) => setTokenQuantity(parseInt(val) || 0)}
-                      selectTextOnFocus
-                      returnKeyType="done"
-                      onSubmitEditing={() => Keyboard.dismiss()}
-                    />
-                    <TouchableOpacity onPress={() => setTokenQuantity(Math.min(20, tokenQuantity + 1))} style={styles.qtyBtn}>
-                      <Plus color="#333" size={20} />
-                    </TouchableOpacity>
+                <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
+                  <View style={[styles.quantityRow, { marginBottom: 20 }]}>
+                    <Text style={styles.qtyLabel}>QUANTITY:</Text>
+                    <View style={styles.qtyControls}>
+                      <TouchableOpacity onPress={() => setTokenQuantity(Math.max(1, tokenQuantity - 1))} style={styles.qtyBtn}>
+                        <Minus color="#333" size={20} />
+                      </TouchableOpacity>
+                      <Text style={styles.qtyVal}>{tokenQuantity}</Text>
+                      <TouchableOpacity onPress={() => setTokenQuantity(Math.min(20, tokenQuantity + 1))} style={styles.qtyBtn}>
+                        <Plus color="#333" size={20} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
 
-                <View style={{ flex: 1 }}>
-            
-            {!tokenTypeToSpawn && tokenStep === 1 ? (
-              <>
-                <View style={styles.tokenTabHeader}>
-                   <Text style={styles.tokenTabLabel}>QUICK SPAWN</Text>
-                </View>
+                  <View style={{ flex: 1 }}>
+              
+              {!tokenTypeToSpawn && tokenStep === 1 ? (
+                <>
+                  <View style={styles.tokenTabHeader}>
+                     <Text style={styles.tokenTabLabel}>QUICK SPAWN</Text>
+                  </View>
 
-                <ScrollView 
-                  style={{ flex: 1 }} 
-                  contentContainerStyle={{ flexGrow: 1 }}
-                >
                   <View style={styles.quickSpawnList}>
                     {savedTokens.length === 0 && (
                       <View style={styles.emptySavedTokens}>
@@ -1671,7 +1659,6 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                   >
                     <Text style={styles.customTokenInlineText}>+ CREATE CUSTOM TOKEN</Text>
                   </TouchableOpacity>
-                </ScrollView>
               </>
             ) : tokenStep === 2 ? (
               <View style={styles.tokenFlowStep}>
@@ -1854,16 +1841,16 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                 </TouchableOpacity>
               </View>
             ) : null}
-          </View>
+              </View>
+            </ScrollView>
 
             <TouchableOpacity 
-              style={[styles.startTargetingBtn, { marginTop: 'auto' }]} 
+              style={[styles.startTargetingBtn, { marginTop: 10 }]} 
               onPress={() => { setShowTokenModal(false); setTokenStep(1); }}
             >
               <Text style={styles.startTargetingText}>CANCEL</Text>
             </TouchableOpacity>
           </View>
-        </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
         </Pressable>
       </Modal>
@@ -2002,15 +1989,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                 <TouchableOpacity onPress={() => setModalQuantity(Math.max(1, modalQuantity - 1))} style={styles.qtyBtn}>
                   <Minus color="#333" size={20} />
                 </TouchableOpacity>
-                <TextInput 
-                  style={styles.qtyVal}
-                  keyboardType="numeric"
-                  value={String(modalQuantity)}
-                  onChangeText={(val) => setModalQuantity(Math.min(activeQuantityAction?.max || 1, parseInt(val) || 0))}
-                  selectTextOnFocus
-                  returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
-                />
+                <Text style={styles.qtyVal}>{modalQuantity}</Text>
                 <TouchableOpacity onPress={() => setModalQuantity(Math.min(activeQuantityAction?.max || 1, modalQuantity + 1))} style={styles.qtyBtn}>
                   <Plus color="#333" size={20} />
                 </TouchableOpacity>
@@ -3206,7 +3185,8 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT * 0.8,
     backgroundColor: '#fff',
     borderRadius: 32,
-    padding: 25,
+    padding: 20,
+    overflow: 'hidden',
     elevation: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -3251,8 +3231,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 30,
-    gap: 20,
+    marginTop: 20,
+    gap: 12,
   },
   qtyLabel: {
     fontSize: 10,
@@ -3262,18 +3242,18 @@ const styles = StyleSheet.create({
   qtyControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 12,
   },
   qtyVal: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     color: '#1a1a1a',
-    minWidth: 60,
+    minWidth: 45,
     textAlign: 'center',
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
     paddingVertical: 5,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
   startTargetingBtn: {
     backgroundColor: '#1a1a1a',

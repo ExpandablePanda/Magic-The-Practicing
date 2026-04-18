@@ -13,7 +13,7 @@ import ScoreView from './src/views/ScoreView';
 import StatsView from './src/views/StatsView';
 import WebShell from './src/components/WebShell';
 
-const APP_VERSION = 'V1.7.0';
+const APP_VERSION = 'V1.6.9';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('landing');
@@ -116,12 +116,10 @@ export default function App() {
   return (
     <WebShell>
       <SafeAreaView style={styles.container}>
-        {currentView !== 'play' && (
-          <View style={styles.header}>
-            <Text style={styles.brand}>Magic: The <Text style={styles.brandRed}>Practicing</Text></Text>
-            <Text style={styles.versionInside}>{APP_VERSION}</Text>
-          </View>
-        )}
+        <View style={styles.header}>
+          <Text style={styles.brand}>Magic: The <Text style={styles.brandRed}>Practicing</Text></Text>
+          <Text style={styles.versionInside}>{APP_VERSION}</Text>
+        </View>
 
         <View style={styles.content}>
           {renderView()}

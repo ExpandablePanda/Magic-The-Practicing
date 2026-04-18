@@ -1173,10 +1173,9 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
       ) : (
         <>
           {/* Game Header */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              automaticallyAdjustContentInsets={false}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
               style={styles.gameHeaderScroll}
               contentContainerStyle={styles.gameHeaderContent}
             >
@@ -1207,31 +1206,6 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.resetButton, !fullDeckData && { opacity: 0.3 }]} disabled={!fullDeckData} onPress={() => { if (turnNumber > 1) setShowResultModal(true); else selectDeck(fullDeckData); }}>
                     <RefreshCcw color="#b30000" size={20} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Inline Global Effects */}
-                <View style={styles.headerDivider} />
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {emblems.map((emb, idx) => (
-                    <TouchableOpacity key={idx} style={styles.emblemChipHeader} onLongPress={() => {
-                      setEmblems(prev => prev.filter((_, i) => i !== idx));
-                    }}>
-                      <Text style={styles.emblemTextHeader}>{emb.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity style={styles.addEmblemBtnHeader} onPress={() => {
-                    if (Platform.OS === 'web') {
-                      const name = window.prompt('New Global Effect', '');
-                      if (name) setEmblems(prev => [...prev, { name }]);
-                    } else {
-                      Alert.prompt('New Global Effect', 'Enter name (e.g. Emblem, Engine, City\'s Blessing):', (name) => {
-                        if (name) setEmblems(prev => [...prev, { name }]);
-                      });
-                    }
-                  }}>
-                    <Plus color="#999" size={14} />
-                    <Text style={styles.addEmblemTextHeader}>EFFECT</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1339,6 +1313,37 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
             </View>
           </View>
 
+          {/* Battlefield */}
+          {/* Header Info Banner / Global Effects */}
+      <View style={styles.utilityBanner}>
+        <View style={styles.turnIndicator}>
+          <Text style={styles.turnLabel}>TURN</Text>
+          <Text style={styles.turnVal}>{turnNumber}</Text>
+        </View>
+        
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.emblemScroll}>
+          {emblems.map((emb, idx) => (
+            <TouchableOpacity key={idx} style={styles.emblemChip} onLongPress={() => {
+              setEmblems(prev => prev.filter((_, i) => i !== idx));
+            }}>
+              <Text style={styles.emblemText}>{emb.name}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity style={styles.addEmblemBtn} onPress={() => {
+            if (Platform.OS === 'web') {
+              const name = window.prompt('New Global Effect', '');
+              if (name) setEmblems(prev => [...prev, { name }]);
+            } else {
+              Alert.prompt('New Global Effect', 'Enter name (e.g. Emblem, Engine, City\'s Blessing):', (name) => {
+                if (name) setEmblems(prev => [...prev, { name }]);
+              });
+            }
+          }}>
+            <Plus color="#999" size={14} />
+            <Text style={styles.addEmblemText}>ADD EFFECT</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
 
       <View style={styles.battlefieldContainer}>
             {shuffleToast && (
@@ -1636,290 +1641,291 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
       {/* Token Creation Modal */}
       <Modal visible={showTokenModal} transparent animationType="slide">
         <Pressable style={styles.modalOverlay}>
-          <KeyboardAvoidingView
+          <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 10}
             style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}
           >
-            <View style={[styles.counterModalContent, { maxHeight: '90%' }]}>
-
-              {/* Header */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <Text style={styles.modalTitle}>SPAWN TOKENS</Text>
-                <TouchableOpacity onPress={() => { setShowTokenModal(false); setTokenStep(1); }}>
-                  <XCircle color="#333" size={24} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Quantity */}
-              <View style={[styles.quantityRow, { marginBottom: 16 }]}>
-                <Text style={styles.qtyLabel}>QUANTITY:</Text>
-                <View style={styles.qtyControls}>
-                  <TouchableOpacity onPress={() => setTokenQuantity(Math.max(1, tokenQuantity - 1))} style={styles.qtyBtn}>
-                    <Minus color="#333" size={20} />
-                  </TouchableOpacity>
-                  <Text style={styles.qtyVal}>{tokenQuantity}</Text>
-                  <TouchableOpacity onPress={() => setTokenQuantity(Math.min(20, tokenQuantity + 1))} style={styles.qtyBtn}>
-                    <Plus color="#333" size={20} />
+                  <View style={[styles.counterModalContent, { maxHeight: '90%' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <Text style={styles.modalTitle}>SPAWN TOKENS</Text>
+                  <TouchableOpacity onPress={() => { setShowTokenModal(false); setTokenStep(1); }}>
+                    <XCircle color="#333" size={24} />
                   </TouchableOpacity>
                 </View>
-              </View>
+                </View>
 
-              {/* Step Content */}
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 10 }}>
-                {!tokenTypeToSpawn && tokenStep === 1 ? (
-                  <>
-                    <View style={styles.tokenTabHeader}>
-                      <Text style={styles.tokenTabLabel}>QUICK SPAWN</Text>
-                    </View>
+                {/* Main Content Area */}
+                <View style={{ flex: 1 }}>
+                  {!tokenTypeToSpawn && tokenStep === 1 ? (
+                    <>
+                      <View style={styles.tokenTabHeader}>
+                         <Text style={styles.tokenTabLabel}>QUICK SPAWN</Text>
+                      </View>
 
-                    <View style={styles.quickSpawnList}>
-                      {savedTokens.length === 0 && (
-                        <View style={styles.emptySavedTokens}>
-                          <Circle color="#ccc" size={32} />
-                          <Text style={styles.emptySavedText}>No saved tokens yet</Text>
-                        </View>
-                      )}
-                      {savedTokens.map((st, idx) => (
-                        <View key={idx} style={styles.savedTokenRow}>
-                          <TouchableOpacity
-                            style={styles.savedTokenBtn}
-                            onPress={() => spawnTokens(tokenQuantity, st.url, st.abilities, { name: st.name, p: st.p, t: st.t })}
-                          >
-                            <View style={styles.savedTokenIcon}>
-                              {st.url ? <Image source={{ uri: st.url }} style={styles.savedTokenImg} /> : <Circle color="#b30000" size={16} />}
-                            </View>
-                            <View>
-                              <Text style={styles.savedTokenName}>
-                                {st.p !== null ? `${st.p}/${st.t} ` : ''}{st.name}
-                              </Text>
-                              {st.abilities?.length > 0 && (
-                                <Text style={styles.savedTokenMeta}>{st.abilities.join(', ')}</Text>
-                              )}
-                            </View>
-                          </TouchableOpacity>
-                          <View style={styles.savedTokenActions}>
-                            <TouchableOpacity onPress={() => {
-                              const newSaved = [...savedTokens];
-                              newSaved[idx].isHearted = !newSaved[idx].isHearted;
-                              setSavedTokens(newSaved.sort((a, b) => (b.isHearted ? 1 : 0) - (a.isHearted ? 1 : 0)));
-                            }}>
-                              <Heart color={st.isHearted ? "#b30000" : "#ccc"} fill={st.isHearted ? "#b30000" : "transparent"} size={18} />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setSavedTokens(prev => prev.filter((_, i) => i !== idx))}>
-                              <Trash2 color="#ff4d4d" size={18} />
-                            </TouchableOpacity>
+                      <View style={styles.quickSpawnList}>
+                        {savedTokens.length === 0 && (
+                          <View style={styles.emptySavedTokens}>
+                            <Circle color="#ccc" size={32} />
+                            <Text style={styles.emptySavedText}>No saved tokens yet</Text>
                           </View>
-                        </View>
-                      ))}
-                    </View>
-
-                    <TouchableOpacity
-                      style={styles.chooseTypeStartBtn}
-                      onPress={() => { setTokenSearch(''); setTokenStep(2); }}
-                    >
-                      <LayoutGrid color="#fff" size={20} />
-                      <Text style={styles.chooseTypeStartText}>CHOOSE TOKEN TYPE</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.customTokenInlineBtn}
-                      onPress={() => { setPendingToken({ name: '', p: null, t: null, abilities: [] }); setTokenStep(2.5); }}
-                    >
-                      <Text style={styles.customTokenInlineText}>+ CREATE CUSTOM TOKEN</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : tokenStep === 2 ? (
-                  <View style={styles.tokenFlowStep}>
-                    <Text style={styles.stepTitle}>STEP 1: SELECT TYPE</Text>
-                    <TextInput
-                      style={styles.tokenSearchInput}
-                      placeholder="Search (e.g. Elf, Treasure...)"
-                      placeholderTextColor="#aaa"
-                      value={tokenSearch}
-                      onChangeText={setTokenSearch}
-                      returnKeyType="done"
-                      onSubmitEditing={() => Keyboard.dismiss()}
-                      autoFocus
-                    />
-                    <ScrollView style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.tokenGridSearch}>
-                      {COMMON_TOKENS
-                        .filter(t => t.name.toLowerCase().includes(tokenSearch.toLowerCase()))
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                        .map(token => (
-                          <TouchableOpacity
-                            key={token.id}
-                            style={styles.tokenSearchRow}
-                            onPress={() => {
-                              setPendingToken({ ...token, abilities: [], p: token.p ?? 1, t: token.t ?? 1 });
-                              setTokenStep(3);
-                            }}
-                          >
-                            <Text style={styles.tokenSearchRowText}>{token.name.toUpperCase()}</Text>
-                          </TouchableOpacity>
-                        ))
-                      }
-                      <TouchableOpacity
-                        style={[styles.tokenSearchRow, { backgroundColor: '#f0f0f0', borderStyle: 'dashed', borderWidth: 1, borderColor: '#ccc' }]}
-                        onPress={() => { setPendingToken({ name: tokenSearch || '', p: null, t: null, abilities: [] }); setTokenStep(2.5); }}
-                      >
-                        <Text style={[styles.tokenSearchRowText, { color: '#666' }]}>+ USE CUSTOM NAME{tokenSearch ? `: "${tokenSearch}"` : ''}</Text>
-                      </TouchableOpacity>
-                    </ScrollView>
-                    <TouchableOpacity onPress={() => setTokenStep(1)} style={styles.stepBackBtn}>
-                      <Text style={styles.stepBackText}>GO BACK</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : tokenStep === 2.5 ? (
-                  <View style={styles.tokenFlowStep}>
-                    <Text style={styles.stepTitle}>STEP 1: CUSTOM NAME</Text>
-                    <TextInput
-                      style={styles.tokenInput}
-                      placeholder="Enter Name..."
-                      placeholderTextColor="#aaa"
-                      value={pendingToken.name}
-                      onChangeText={val => setPendingToken(prev => ({ ...prev, name: val }))}
-                      autoFocus
-                      returnKeyType="done"
-                      onSubmitEditing={() => { if (pendingToken.name) { setPendingToken(prev => ({ ...prev, p: prev.p ?? 1, t: prev.t ?? 1 })); setTokenStep(3); } else Keyboard.dismiss(); }}
-                    />
-                    <TouchableOpacity
-                      style={[styles.stepNextBtn, !pendingToken.name && { opacity: 0.5 }]}
-                      disabled={!pendingToken.name}
-                      onPress={() => { setPendingToken(prev => ({ ...prev, p: prev.p ?? 1, t: prev.t ?? 1 })); setTokenStep(3); }}
-                    >
-                      <Text style={styles.stepNextText}>SET P/T & ABILITIES</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setTokenStep(2)} style={styles.stepBackBtn}>
-                      <Text style={styles.stepBackText}>GO BACK TO SEARCH</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : tokenStep === 3 ? (
-                  <View style={styles.tokenFlowStep}>
-                    <Text style={styles.stepTitle}>STEP 2: POWER / TOUGHNESS</Text>
-                    <View style={styles.ptDualRow}>
-                      <View style={styles.ptInputContainer}>
-                        <Text style={styles.ptInputLabel}>POWER</Text>
-                        <View style={styles.ptStepper}>
-                          <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: Math.max(0, (prev.p ?? 1) - 1) }))}>
-                            <Minus color="#b30000" size={18} />
-                          </TouchableOpacity>
-                          <Text style={styles.stepperVal}>{pendingToken.p ?? 1}</Text>
-                          <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: (prev.p ?? 1) + 1 }))}>
-                            <Plus color="#b30000" size={18} />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                      <View style={styles.ptInputContainer}>
-                        <Text style={styles.ptInputLabel}>TOUGHNESS</Text>
-                        <View style={styles.ptStepper}>
-                          <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: Math.max(0, (prev.t ?? 1) - 1) }))}>
-                            <Minus color="#b30000" size={18} />
-                          </TouchableOpacity>
-                          <Text style={styles.stepperVal}>{pendingToken.t ?? 1}</Text>
-                          <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: (prev.t ?? 1) + 1 }))}>
-                            <Plus color="#b30000" size={18} />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-                    <TouchableOpacity style={styles.stepNextBtn} onPress={() => setTokenStep(4)}>
-                      <Text style={styles.stepNextText}>CONTINUE TO ABILITIES</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setTokenStep(2)} style={styles.stepBackBtn}>
-                      <Text style={styles.stepBackText}>GO BACK</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : tokenStep === 4 ? (
-                  <View style={styles.tokenFlowStep}>
-                    <Text style={styles.stepTitle}>STEP 3: ADD ABILITIES</Text>
-                    <View style={styles.abilityGrid}>
-                      {['Flying', 'Lifelink', 'Deathtouch', 'Vigilance', 'Trample', 'Haste', 'Ward 1', 'Indestructible'].map(ab => (
-                        <TouchableOpacity
-                          key={ab}
-                          style={[styles.abilityChip, pendingToken.abilities.includes(ab) && styles.abilityChipActive]}
-                          onPress={() => {
-                            const abs = pendingToken.abilities.includes(ab)
-                              ? pendingToken.abilities.filter(a => a !== ab)
-                              : [...pendingToken.abilities, ab];
-                            setPendingToken(prev => ({ ...prev, abilities: abs }));
-                          }}
-                        >
-                          <Text style={[styles.abilityChipText, pendingToken.abilities.includes(ab) && styles.abilityChipTextActive]}>{ab}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    <TouchableOpacity style={styles.stepNextBtn} onPress={() => {
-                      setTokenTypeToSpawn({ name: pendingToken.name, p: pendingToken.p ?? 1, t: pendingToken.t ?? 1 });
-                      openTokenArtPicker(pendingToken.name, pendingToken.p ?? 1, pendingToken.t ?? 1);
-                      setTokenStep(5);
-                    }}>
-                      <Text style={styles.stepNextText}>FIND ART & SPAWN</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setTokenStep(3)} style={styles.stepBackBtn}>
-                      <Text style={styles.stepBackText}>GO BACK</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : tokenStep === 5 ? (
-                  <View style={styles.artPickerContainer}>
-                    <Text style={styles.artPickerSubtitle}>CHOOSE ART FOR {pendingToken.name.toUpperCase()}</Text>
-                    <View style={{ height: 150, width: '100%' }}>
-                      {loadingTokenArt ? (
-                        <ActivityIndicator color="#b30000" size="large" style={{ margin: 40 }} />
-                      ) : (
-                        <ScrollView
-                          horizontal
-                          nestedScrollEnabled={true}
-                          scrollEnabled={true}
-                          showsHorizontalScrollIndicator={true}
-                          style={{ flex: 1, height: 150 }}
-                          contentContainerStyle={styles.artList}
-                        >
-                          {tokenArtOptions.length > 0 ? tokenArtOptions.map((print, idx) => (
-                            <TouchableOpacity key={idx} style={styles.artOption} onPress={() => {
-                              const img = ScryfallService.getImageUrl(print);
-                              spawnTokens(tokenQuantity, img, pendingToken.abilities);
-                              if (!savedTokens.some(s => s.name === pendingToken.name && s.p === pendingToken.p && s.t === pendingToken.t)) {
-                                setSavedTokens(prev => [{ ...pendingToken, url: img, isHearted: false }, ...prev].slice(0, 15));
-                              }
-                              setShowTokenModal(false);
-                              setTokenStep(1);
-                            }}>
-                              <Image source={{ uri: ScryfallService.getImageUrl(print, 'small') }} style={styles.artThumb} />
-                            </TouchableOpacity>
-                          )) : (
-                            <TouchableOpacity style={styles.artOption} onPress={() => {
-                              spawnTokens(tokenQuantity, null, pendingToken.abilities);
-                              setShowTokenModal(false);
-                              setTokenStep(1);
-                            }}>
-                              <View style={[styles.artThumb, { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' }]}>
-                                <LayoutGrid color="#ccc" />
+                        )}
+                        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 300 }}>
+                          {savedTokens.map((st, idx) => (
+                            <View key={idx} style={styles.savedTokenRow}>
+                              <TouchableOpacity 
+                                style={styles.savedTokenBtn}
+                                onPress={() => {
+                                  spawnTokens(tokenQuantity, st.url, st.abilities, { name: st.name, p: st.p, t: st.t });
+                                }}
+                              >
+                                 <View style={styles.savedTokenIcon}>
+                                   {st.url ? <Image source={{ uri: st.url }} style={styles.savedTokenImg} /> : <Circle color="#b30000" size={16} />}
+                                 </View>
+                                 <View>
+                                   <Text style={styles.savedTokenName}>
+                                     {st.p !== null ? `${st.p}/${st.t} ` : ''}{st.name}
+                                   </Text>
+                                   {st.abilities?.length > 0 && (
+                                     <Text style={styles.savedTokenMeta}>{st.abilities.join(', ')}</Text>
+                                   )}
+                                 </View>
+                              </TouchableOpacity>
+                              <View style={styles.savedTokenActions}>
+                                <TouchableOpacity onPress={() => {
+                                  const newSaved = [...savedTokens];
+                                  newSaved[idx].isHearted = !newSaved[idx].isHearted;
+                                  setSavedTokens(newSaved.sort((a,b) => (b.isHearted?1:0) - (a.isHearted?1:0)));
+                                }}>
+                                  <Heart color={st.isHearted ? "#b30000" : "#ccc"} fill={st.isHearted ? "#b30000" : "transparent"} size={18} />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setSavedTokens(prev => prev.filter((_, i) => i !== idx))}>
+                                  <Trash2 color="#ff4d4d" size={18} />
+                                </TouchableOpacity>
                               </View>
-                            </TouchableOpacity>
-                          )}
+                            </View>
+                          ))}
                         </ScrollView>
-                      )}
+                      </View>
+
+                      <TouchableOpacity 
+                        style={styles.chooseTypeStartBtn} 
+                        onPress={() => {
+                          setTokenSearch('');
+                          setTokenStep(2);
+                        }}
+                      >
+                        <LayoutGrid color="#fff" size={20} />
+                        <Text style={styles.chooseTypeStartText}>CHOOSE TOKEN TYPE</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={styles.customTokenInlineBtn} 
+                        onPress={() => {
+                          setPendingToken({ name: '', p: null, t: null, abilities: [] });
+                          setTokenStep(2.5);
+                        }}
+                      >
+                        <Text style={styles.customTokenInlineText}>+ CREATE CUSTOM TOKEN</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : tokenStep === 2 ? (
+                    <View style={styles.tokenFlowStep}>
+                       <Text style={styles.stepTitle}>STEP 1: SELECT TYPE</Text>
+                       <TextInput 
+                         style={styles.tokenSearchInput}
+                         placeholder="Search (e.g. Elf, Treasure...)"
+                         placeholderTextColor="#aaa"
+                         value={tokenSearch}
+                         onChangeText={setTokenSearch}
+                         returnKeyType="done"
+                         onSubmitEditing={() => Keyboard.dismiss()}
+                         autoFocus
+                       />
+                       <ScrollView style={{ maxHeight: 300 }} contentContainerStyle={styles.tokenGridSearch}>
+                         {COMMON_TOKENS
+                           .filter(t => t.name.toLowerCase().includes(tokenSearch.toLowerCase()))
+                           .sort((a,b) => a.name.localeCompare(b.name))
+                           .map(token => (
+                             <TouchableOpacity 
+                               key={token.id} 
+                               style={styles.tokenSearchRow} 
+                               onPress={() => {
+                                 setPendingToken({ ...token, abilities: [], p: token.p ?? 1, t: token.t ?? 1 });
+                                 setTokenStep(3);
+                               }}
+                             >
+                               <Text style={styles.tokenSearchRowText}>{token.name.toUpperCase()}</Text>
+                             </TouchableOpacity>
+                           ))
+                         }
+                         <TouchableOpacity 
+                           style={[styles.tokenSearchRow, { backgroundColor: '#f0f0f0', borderStyle: 'dashed', borderWidth: 1, borderColor: '#ccc' }]} 
+                           onPress={() => {
+                             setPendingToken({ name: tokenSearch || '', p: null, t: null, abilities: [] });
+                             setTokenStep(2.5);
+                           }}
+                         >
+                           <Text style={[styles.tokenSearchRowText, { color: '#666' }]}>+ USE CUSTOM NAME {tokenSearch ? `: "${tokenSearch}"` : ''}</Text>
+                         </TouchableOpacity>
+                       </ScrollView>
+                       <TouchableOpacity onPress={() => setTokenStep(1)} style={styles.stepBackBtn}>
+                          <Text style={styles.stepBackText}>GO BACK</Text>
+                       </TouchableOpacity>
                     </View>
-                    <TouchableOpacity onPress={() => setTokenStep(4)} style={styles.backToTypesBtn}>
-                      <Text style={styles.backToTypesText}>BACK TO ABILITIES</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-              </ScrollView>
+                  ) : tokenStep === 2.5 ? (
+                    <View style={styles.tokenFlowStep}>
+                       <Text style={styles.stepTitle}>STEP 1: CUSTOM NAME</Text>
+                       <TextInput 
+                         style={styles.tokenInput}
+                         placeholder="Enter Name..."
+                         placeholderTextColor="#aaa"
+                         value={pendingToken.name}
+                         onChangeText={val => setPendingToken(prev => ({ ...prev, name: val }))}
+                         autoFocus
+                         returnKeyType="done"
+                         onSubmitEditing={() => {
+                            if (pendingToken.name) setTokenStep(3);
+                            else Keyboard.dismiss();
+                         }}
+                       />
+                       <TouchableOpacity 
+                         style={[styles.stepNextBtn, !pendingToken.name && { opacity: 0.5 }]} 
+                         disabled={!pendingToken.name}
+                         onPress={() => {
+                           setPendingToken(prev => ({ ...prev, p: prev.p ?? 1, t: prev.t ?? 1 }));
+                           setTokenStep(3);
+                         }}
+                       >
+                         <Text style={styles.stepNextText}>SET P/T & ABILITIES</Text>
+                       </TouchableOpacity>
+                       <TouchableOpacity onPress={() => setTokenStep(2)} style={styles.stepBackBtn}>
+                          <Text style={styles.stepBackText}>GO BACK TO SEARCH</Text>
+                       </TouchableOpacity>
+                    </View>
+                  ) : tokenStep === 3 ? (
+                    <View style={styles.tokenFlowStep}>
+                      <Text style={styles.stepTitle}>STEP 2: POWER / TOUGHNESS</Text>
+                      
+                      <View style={styles.ptDualRow}>
+                         <View style={styles.ptInputContainer}>
+                           <Text style={styles.ptInputLabel}>POWER</Text>
+                           <View style={styles.ptStepper}>
+                              <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: Math.max(0, (prev.p ?? 1) - 1) }))}>
+                                <Minus color="#b30000" size={18} />
+                              </TouchableOpacity>
+                              <Text style={styles.stepperVal}>{pendingToken.p ?? 1}</Text>
+                              <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: (prev.p ?? 1) + 1 }))}>
+                                <Plus color="#b30000" size={18} />
+                              </TouchableOpacity>
+                           </View>
+                         </View>
+                         <View style={styles.ptInputContainer}>
+                           <Text style={styles.ptInputLabel}>TOUGHNESS</Text>
+                           <View style={styles.ptStepper}>
+                              <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: Math.max(0, (prev.t ?? 1) - 1) }))}>
+                                <Minus color="#b30000" size={18} />
+                              </TouchableOpacity>
+                              <Text style={styles.stepperVal}>{pendingToken.t ?? 1}</Text>
+                              <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: (prev.t ?? 1) + 1 }))}>
+                                <Plus color="#b30000" size={18} />
+                              </TouchableOpacity>
+                           </View>
+                         </View>
+                      </View>
 
-              {/* Cancel */}
-              <TouchableOpacity
-                style={[styles.startTargetingBtn, { marginTop: 10 }]}
-                onPress={() => { setShowTokenModal(false); setTokenStep(1); }}
-              >
-                <Text style={styles.startTargetingText}>CANCEL</Text>
-              </TouchableOpacity>
+                      <TouchableOpacity style={styles.stepNextBtn} onPress={() => setTokenStep(4)}>
+                         <Text style={styles.stepNextText}>CONTINUE TO ABILITIES</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => setTokenStep(2)} style={styles.stepBackBtn}>
+                          <Text style={styles.stepBackText}>GO BACK</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : tokenStep === 4 ? (
+                    <View style={styles.tokenFlowStep}>
+                       <Text style={styles.stepTitle}>STEP 3: ADD ABILITIES</Text>
+                       <View style={styles.abilityGrid}>
+                         {['Flying', 'Lifelink', 'Deathtouch', 'Vigilance', 'Trample', 'Haste', 'Ward 1', 'Indestructible'].map(ab => (
+                           <TouchableOpacity 
+                             key={ab} 
+                             style={[styles.abilityChip, pendingToken.abilities.includes(ab) && styles.abilityChipActive]}
+                             onPress={() => {
+                               const abs = pendingToken.abilities.includes(ab) 
+                                 ? pendingToken.abilities.filter(a => a !== ab)
+                                 : [...pendingToken.abilities, ab];
+                               setPendingToken(prev => ({ ...prev, abilities: abs }));
+                             }}
+                           >
+                              <Text style={[styles.abilityChipText, pendingToken.abilities.includes(ab) && styles.abilityChipTextActive]}>{ab}</Text>
+                           </TouchableOpacity>
+                         ))}
+                       </View>
+                       <TouchableOpacity style={styles.stepNextBtn} onPress={() => {
+                          setTokenTypeToSpawn({ name: pendingToken.name, p: pendingToken.p, t: pendingToken.t });
+                          openTokenArtPicker(pendingToken.name, pendingToken.p, pendingToken.t);
+                          setTokenStep(5);
+                       }}>
+                         <Text style={styles.stepNextText}>FIND ART & SPAWN</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => setTokenStep(3)} style={styles.stepBackBtn}>
+                          <Text style={styles.stepBackText}>GO BACK</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : tokenStep === 5 ? (
+                    <View style={[styles.artPickerContainer, { flex: 1 }]}>
+                      <Text style={styles.artPickerSubtitle}>CHOOSE ART FOR {pendingToken.name.toUpperCase()}</Text>
+                      <View style={{ height: 160 }}>
+                        {loadingTokenArt ? (
+                          <ActivityIndicator color="#b30000" size="large" style={{ margin: 40 }} />
+                        ) : (
+                          <ScrollView 
+                            horizontal 
+                            nestedScrollEnabled={true}
+                            showsHorizontalScrollIndicator={true} 
+                            style={{ flex: 1, width: '100%' }} 
+                            contentContainerStyle={styles.artList}
+                          >
+                            {tokenArtOptions.length > 0 ? tokenArtOptions.map((print, idx) => (
+                              <TouchableOpacity key={idx} style={styles.artOption} onPress={() => {
+                                const img = ScryfallService.getImageUrl(print);
+                                spawnTokens(tokenQuantity, img, pendingToken.abilities);
+                                if (!savedTokens.some(s => s.name === pendingToken.name && s.p === pendingToken.p && s.t === pendingToken.t)) {
+                                   setSavedTokens(prev => [{ ...pendingToken, url: img, isHearted: false }, ...prev].slice(0, 15));
+                                }
+                                setShowTokenModal(false);
+                                setTokenStep(1);
+                              }}>
+                                <Image source={{ uri: ScryfallService.getImageUrl(print, 'small') }} style={styles.artThumb} />
+                              </TouchableOpacity>
+                            )) : (
+                              <TouchableOpacity style={styles.artOption} onPress={() => {
+                                spawnTokens(tokenQuantity, null, pendingToken.abilities);
+                                setShowTokenModal(false);
+                                setTokenStep(1);
+                              }}>
+                                <View style={[styles.artThumb, {backgroundColor: '#eee', justifyContent:'center', alignItems:'center'}]}><LayoutGrid color="#ccc" /></View>
+                              </TouchableOpacity>
+                            )}
+                          </ScrollView>
+                        )}
+                      </View>
+                      <TouchableOpacity onPress={() => setTokenStep(4)} style={styles.backToTypesBtn}>
+                        <Text style={styles.backToTypesText}>BACK TO ABILITIES</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
 
-            </View>
-          </KeyboardAvoidingView>
-        </Pressable>
-      </Modal>
+                <TouchableOpacity 
+                  style={[styles.startTargetingBtn, { marginTop: 10 }]} 
+                  onPress={() => { setShowTokenModal(false); setTokenStep(1); }}
+                >
+                  <Text style={styles.startTargetingText}>CANCEL</Text>
+                </TouchableOpacity>
+              </View>
+            </KeyboardAvoidingView>
+          </Pressable>
+        </Modal>
 
         {/* Library Menu Modal */}
         <Modal visible={showLibraryMenu} transparent animationType="fade">
@@ -1992,7 +1998,6 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
           </View>
           
           <FlatList
-            style={{ flex: 1 }}
             data={[...library].sort((a, b) => a.name.localeCompare(b.name))}
             keyExtractor={(item) => item.instanceId}
             renderItem={({ item }) => (
@@ -2119,55 +2124,50 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
               <XCircle color="#333" size={24} />
             </TouchableOpacity>
           </View>
+          
+          <FlatList
+            data={showZoneModal === 'exile' ? exile : graveyard}
+            keyExtractor={(item) => item.instanceId}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={styles.searchItem}
+                onLongPress={() => openGallery(showZoneModal === 'exile' ? exile : graveyard, item)}
+              >
+                <Image 
+                  source={{ uri: ScryfallService.getImageUrl(item, 'small') }} 
+                  style={styles.searchThumb} 
+                />
+                <View style={styles.searchItemInfo}>
+                  <Text style={styles.searchItemName}>{item.name}</Text>
+                  <Text style={styles.searchItemType}>{item.type_line}</Text>
+                </View>
+                <View style={[styles.searchActions, {flexWrap: 'wrap', maxWidth: 150, justifyContent: 'flex-end'}]}>
+                  <TouchableOpacity
+                    style={styles.searchActionBtn}
+                    onPress={() => { moveCard(item.instanceId, showZoneModal, 'hand'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
+                  >
+                    <Text style={styles.searchActionText}>HAND</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.searchActionBtn}
+                    onPress={() => { moveCard(item.instanceId, showZoneModal, 'battlefield'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
+                  >
+                    <Text style={styles.searchActionText}>FIELD</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.searchActionBtn, styles.searchActionBtnPrimary]}
+                    onPress={() => { moveCard(item.instanceId, showZoneModal, 'library'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
+                  >
+                    <Text style={[styles.searchActionText, {color: '#fff'}]}>DECK</Text>
+                  </TouchableOpacity>
 
-          <View style={{ flex: 1 }}>
-            <ScrollView
-              nestedScrollEnabled={true}
-              scrollEnabled={true}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ padding: 15 }}
-            >
-              {(showZoneModal === 'exile' ? exile : graveyard).map(item => (
-                <TouchableOpacity
-                  key={item.instanceId}
-                  style={styles.searchItem}
-                  onPress={() => openGallery(showZoneModal === 'exile' ? exile : graveyard, item)}
-                >
-                  <Image
-                    source={{ uri: ScryfallService.getImageUrl(item, 'small') }}
-                    style={styles.searchThumb}
-                  />
-                  <View style={styles.searchItemInfo}>
-                    <Text style={styles.searchItemName}>{item.name}</Text>
-                    <Text style={styles.searchItemType}>{item.type_line}</Text>
-                  </View>
-                  <View style={[styles.searchActions, { flexWrap: 'wrap', maxWidth: 150, justifyContent: 'flex-end' }]}>
-                    <TouchableOpacity
-                      style={styles.searchActionBtn}
-                      onPress={() => { moveCard(item.instanceId, showZoneModal, 'hand'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
-                    >
-                      <Text style={styles.searchActionText}>HAND</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.searchActionBtn}
-                      onPress={() => { moveCard(item.instanceId, showZoneModal, 'battlefield'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
-                    >
-                      <Text style={styles.searchActionText}>FIELD</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.searchActionBtn, styles.searchActionBtnPrimary]}
-                      onPress={() => { moveCard(item.instanceId, showZoneModal, 'library'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
-                    >
-                      <Text style={[styles.searchActionText, { color: '#fff' }]}>DECK</Text>
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
+                </View>
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={{ padding: 15 }}
+          />
           <View style={styles.searchFooter}>
-            <Text style={styles.searchFooterText}>Tap a card to zoom. Use buttons to move it.</Text>
+            <Text style={styles.searchFooterText}>Tutor cards back to any zone. Long-press to zoom.</Text>
           </View>
         </View>
       </Modal>
@@ -2552,7 +2552,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingVertical: 10,
     gap: 15,
   },
   backButton: {
@@ -2602,53 +2602,76 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#1a1a1a',
   },
+  utilityBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    gap: 15,
+  },
+  turnIndicator: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  turnLabel: {
+    fontSize: 7,
+    fontWeight: '900',
+    color: '#999',
+    letterSpacing: 1,
+  },
   turnVal: {
     fontSize: 18,
     fontWeight: '900',
     color: '#1a1a1a',
   },
-  headerDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#eee',
-    marginHorizontal: 5,
+  emblemScroll: {
+    flex: 1,
   },
-  emblemChipHeader: {
+  emblemChip: {
     backgroundColor: '#fff8e1',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: '#ff8f00',
-    marginRight: 6,
+    marginRight: 8,
+    height: 30,
     justifyContent: 'center',
   },
-  emblemTextHeader: {
-    fontSize: 9,
+  emblemText: {
+    fontSize: 10,
     fontWeight: '900',
     color: '#ff8f00',
     letterSpacing: 0.5,
   },
-  addEmblemBtnHeader: {
+  addEmblemBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: '#eee',
     borderStyle: 'dashed',
+    height: 30,
   },
-  addEmblemTextHeader: {
-    fontSize: 8,
+  addEmblemText: {
+    fontSize: 9,
     fontWeight: '900',
     color: '#999',
   },
   stockArea: {
     flexDirection: 'row',
     paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingVertical: 10,
     backgroundColor: '#fafafa',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -3876,7 +3899,7 @@ const styles = StyleSheet.create({
   searchModalContainer: {
     flex: 1,
     backgroundColor: '#fff',
-    marginTop: Platform.OS === 'ios' ? 100 : 50,
+    marginTop: 50,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     shadowColor: '#000',

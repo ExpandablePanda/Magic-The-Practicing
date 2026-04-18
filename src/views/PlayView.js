@@ -602,7 +602,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
         };
       }
       return card;
-    });
+    }));
   };
 
   const toggleTap = (instanceId, forceValue = null) => {

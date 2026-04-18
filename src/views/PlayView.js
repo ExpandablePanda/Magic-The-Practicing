@@ -827,10 +827,11 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     setLoadingTokenArt(false);
   };
 
-  const spawnTokens = (count = 1, customArt = null, abilities = []) => {
-    if (!tokenTypeToSpawn) return;
+  const spawnTokens = (count = 1, customArt = null, abilities = [], tokenOverride = null) => {
+    const token = tokenOverride || tokenTypeToSpawn;
+    if (!token) return;
     pushHistory();
-    const { name, p, t } = tokenTypeToSpawn;
+    const { name, p, t } = token;
     const artUrl = customArt || 'https://cards.scryfall.io/normal/front/5/8/5859600a-2007-4f93-9c88-e2074f939c88.jpg';
     const artifactTokens = ['Treasure', 'Clue', 'Food'];
     const isArtifactToken = artifactTokens.includes(name);
@@ -1615,8 +1616,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                         <TouchableOpacity 
                           style={styles.savedTokenBtn}
                           onPress={() => {
-                            setTokenTypeToSpawn({ name: st.name, p: st.p, t: st.t });
-                            spawnTokens(tokenQuantity, st.url, st.abilities);
+                            spawnTokens(tokenQuantity, st.url, st.abilities, { name: st.name, p: st.p, t: st.t });
                           }}
                         >
                            <View style={styles.savedTokenIcon}>
@@ -1690,7 +1690,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                          key={token.id} 
                          style={styles.tokenSearchRow} 
                          onPress={() => {
-                           setPendingToken({ ...token, abilities: [], p: token.p, t: token.t });
+                           setPendingToken({ ...token, abilities: [], p: token.p ?? 1, t: token.t ?? 1 });
                            setTokenStep(3);
                          }}
                        >
@@ -1731,7 +1731,10 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                  <TouchableOpacity 
                    style={[styles.stepNextBtn, !pendingToken.name && { opacity: 0.5 }]} 
                    disabled={!pendingToken.name}
-                   onPress={() => setTokenStep(3)}
+                   onPress={() => {
+                     setPendingToken(prev => ({ ...prev, p: prev.p ?? 1, t: prev.t ?? 1 }));
+                     setTokenStep(3);
+                   }}
                  >
                    <Text style={styles.stepNextText}>SET P/T & ABILITIES</Text>
                  </TouchableOpacity>
@@ -1810,11 +1813,11 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
             ) : tokenStep === 5 ? (
               <View style={[styles.artPickerContainer, { flex: 1 }]}>
                 <Text style={styles.artPickerSubtitle}>CHOOSE ART FOR {pendingToken.name.toUpperCase()}</Text>
-                <View style={{ flex: 1, minHeight: 180 }}>
+                <View style={{ height: 160 }}>
                   {loadingTokenArt ? (
                     <ActivityIndicator color="#b30000" size="large" style={{ margin: 40 }} />
                   ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={styles.artList}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ flex: 1 }} contentContainerStyle={styles.artList}>
                       {tokenArtOptions.length > 0 ? tokenArtOptions.map((print, idx) => (
                         <TouchableOpacity key={idx} style={styles.artOption} onPress={() => {
                           const img = ScryfallService.getImageUrl(print);
@@ -3653,7 +3656,9 @@ const styles = StyleSheet.create({
   },
   artList: {
     paddingVertical: 10,
-    gap: 15,
+    paddingHorizontal: 8,
+    gap: 10,
+    alignItems: 'center',
   },
   artOption: {
     alignItems: 'center',
@@ -4136,25 +4141,25 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-    padding: 10,
+    gap: 4,
+    padding: 5,
   },
   hMenuBtn: {
     backgroundColor: '#fff',
     width: '100%',
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     alignItems: 'center',
   },
   hMenuText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: '900',
     color: '#333',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   artLabelBox: {
     position: 'absolute',

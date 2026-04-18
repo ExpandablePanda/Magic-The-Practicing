@@ -116,6 +116,9 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
   const [bottomingZoom, setBottomingZoom] = useState(null);
   const [showEmblemModal, setShowEmblemModal] = useState(false);
   const [emblems, setEmblems] = useState([]); // { name, icon }
+  const [manaPool, setManaPool] = useState({ W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 });
+  const [manaPersistence, setManaPersistence] = useState(false);
+  const [showManaPicker, setShowManaPicker] = useState(null); // cardId or null
   
   // New Token Flow State
   const [tokenStep, setTokenStep] = useState(1); // 1: Quick/Choose, 2: Name, 3: P/T, 4: Abilities, 5: Art
@@ -191,6 +194,8 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     setMyLife(isEDH ? 40 : 20);
     setOppLife(isEDH ? 40 : 20);
     setPoisonCounters(0);
+    setManaPool({ W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 });
+    setManaPersistence(false);
     setViewMode('game');
   };
 
@@ -256,6 +261,10 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     });
   };
 
+  const addManaToPool = (color, amount = 1) => {
+    setManaPool(prev => ({ ...prev, [color]: prev[color] + amount }));
+  };
+
   const nextTurn = () => {
     const MAX_HAND = 7;
     if (hand.length > MAX_HAND) {
@@ -268,6 +277,9 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     }
     pushHistory();
     setTurnNumber(prev => prev + 1);
+    if (!manaPersistence) {
+      setManaPool({ W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 });
+    }
     
     // 1. Untap all cards, Clear sickness, and Remove temporary counters
     setBattlefield(prev => {
@@ -590,6 +602,15 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
         };
       }
       return card;
+    });
+  };
+
+  const toggleTap = (instanceId, forceValue = null) => {
+    setBattlefield(prev => prev.map(card => {
+      if (card.instanceId === instanceId) {
+        return { ...card, isTapped: forceValue !== null ? forceValue : !card.isTapped };
+      }
+      return card;
     }));
   };
 
@@ -605,128 +626,141 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
         isTargeting && styles.targetingCard,
         card.isTapped && styles.tappedCard
       ]}>
-        <TouchableOpacity 
-          style={{ width: '100%', height: '100%' }}
-          onPress={() => {
-            if (isTargeting) applyCounters(card.instanceId);
-            else if (isEditing) setActiveActionId(null);
-            else setActiveActionId(card.instanceId);
-          }}
-          onLongPress={() => openGallery(battlefield, card)}
-        >
-          <Image 
-            source={{ uri: ScryfallService.getImageUrl(card, 'normal') }} 
-            style={[
-              styles.cardImage, 
-              card.isTapped && styles.tappedImage,
-              card.hasSickness && styles.summoningSicknessImage
-            ]}
-            resizeMode="contain"
-          />
-          {card.quantity > 1 && (
-            <View style={styles.quantityBadge}>
-              <Text style={styles.quantityBadgeText}>x{card.quantity}</Text>
-            </View>
-          )}
-          {isTargeting && <View style={styles.targetingOverlay}><Plus color="#fff" size={32} /></View>}
-          
-           {isEditing && (
-            <View style={styles.cardActionsOverlay}>
-              {!card.type_line?.includes('Land') && !card.hasSickness && (
-                <TouchableOpacity style={styles.actionBtnCombat} onPress={() => attackWithCard(card)}>
-                  <Sword color="#fff" size={11} />
-                  <Text style={styles.actionBtnText}>ATTACK</Text>
+        {/* Card Image Section */}
+        <View style={styles.cardImageSection}>
+          <TouchableOpacity 
+            style={{ width: '100%', height: '100%' }}
+            onPress={() => {
+              if (isTargeting) applyCounters(card.instanceId);
+              else if (isEditing) setActiveActionId(null);
+              else setActiveActionId(card.instanceId);
+            }}
+            onLongPress={() => openGallery(battlefield, card)}
+          >
+            <Image 
+              source={{ uri: ScryfallService.getImageUrl(card, 'normal') }} 
+              style={[
+                styles.cardImage, 
+                card.isTapped && styles.tappedImage,
+                card.hasSickness && styles.summoningSicknessImage
+              ]}
+              resizeMode="contain"
+            />
+            {card.quantity > 1 && (
+              <View style={styles.quantityBadge}>
+                <Text style={styles.quantityBadgeText}>x{card.quantity}</Text>
+              </View>
+            )}
+            {isTargeting && <View style={styles.targetingOverlay}><Plus color="#fff" size={32} /></View>}
+            
+             {isEditing && (
+              <View style={styles.cardActionsOverlay}>
+                <TouchableOpacity 
+                   style={[styles.actionBtnMana, { backgroundColor: '#ffd700' }]} 
+                   onPress={() => {
+                     setShowManaPicker(card.instanceId);
+                     setActiveActionId(null);
+                   }}
+                >
+                  <Zap color="#333" size={11} fill="#333" />
+                  <Text style={[styles.actionBtnText, { color: '#333' }]}>ADD MANA</Text>
                 </TouchableOpacity>
-              )}
-              {card.quantity > 1 && (
-                <TouchableOpacity style={styles.actionBtnSplit} onPress={() => splitStack(card.instanceId)}>
-                  <LayoutGrid color="#fff" size={11} />
-                  <Text style={styles.actionBtnText}>SPLIT</Text>
-                </TouchableOpacity>
-              )}
-              {card.hasSickness && (
-                <TouchableOpacity style={styles.actionBtnHaste} onPress={() => grantHaste(card.instanceId)}>
-                  <Zap color="#fff" size={11} fill="#fff" />
-                  <Text style={styles.actionBtnText}>HASTE</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={styles.actionBtnTap} onPress={() => toggleTap(card.instanceId)}>
-                <RotateCcw color="#fff" size={11} />
-                <Text style={styles.actionBtnText}>
-                  {card.isTapped ? 'UNTAP' : 'TAP'}
-                </Text>
-              </TouchableOpacity>
-              {card.type_line?.includes('Land') && !card.isTapped && (
-                <TouchableOpacity style={styles.actionBtnETBTapped} onPress={() => toggleTap(card.instanceId)}>
-                  <Layers color="#fff" size={11} />
-                  <Text style={styles.actionBtnText}>ETB TAPPED</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={styles.actionBtnClose} onPress={() => setActiveActionId(null)}>
-                <Text style={[styles.actionBtnText, { color: '#999' }]}>CLOSE</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </TouchableOpacity>
 
-        {card.isCommander && <View style={styles.commanderBadge}><Text style={styles.commanderBadgeText}>C</Text></View>}
-        
-        {hasCounters && (
-          <View style={styles.topCardOverlay}>
-            <View style={styles.counterList}>
+                {!card.type_line?.includes('Land') && !card.hasSickness && (
+                  <TouchableOpacity style={styles.actionBtnCombat} onPress={() => attackWithCard(card)}>
+                    <Sword color="#fff" size={11} />
+                    <Text style={styles.actionBtnText}>ATTACK</Text>
+                  </TouchableOpacity>
+                )}
+                {card.quantity > 1 && (
+                  <TouchableOpacity style={styles.actionBtnSplit} onPress={() => splitStack(card.instanceId)}>
+                    <LayoutGrid color="#fff" size={11} />
+                    <Text style={styles.actionBtnText}>SPLIT</Text>
+                  </TouchableOpacity>
+                )}
+                {card.hasSickness && (
+                  <TouchableOpacity style={styles.actionBtnHaste} onPress={() => grantHaste(card.instanceId)}>
+                    <Zap color="#fff" size={11} fill="#fff" />
+                    <Text style={styles.actionBtnText}>HASTE</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.actionBtnTap} onPress={() => toggleTap(card.instanceId)}>
+                  <RotateCcw color="#fff" size={11} />
+                  <Text style={styles.actionBtnText}>
+                    {card.isTapped ? 'UNTAP' : 'TAP'}
+                  </Text>
+                </TouchableOpacity>
+                {card.type_line?.includes('Land') && !card.isTapped && (
+                  <TouchableOpacity style={styles.actionBtnETBTapped} onPress={() => toggleTap(card.instanceId)}>
+                    <Layers color="#fff" size={11} />
+                    <Text style={styles.actionBtnText}>ETB TAPPED</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.actionBtnClose} onPress={() => setActiveActionId(null)}>
+                  <Text style={[styles.actionBtnText, { color: '#999' }]}>CLOSE</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {card.isCommander && <View style={styles.commanderBadge}><Text style={styles.commanderBadgeText}>C</Text></View>}
+            {card.type_line?.includes('Land') && !card.isTapped && (
+              <View style={styles.landIndicator}>
+                <Zap color="#ffd700" size={8} fill="#ffd700" />
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Service Section (Below Card) */}
+        <View style={styles.cardServiceSection}>
+          {hasCounters && (
+            <View style={styles.counterListBelow}>
               {card.counters.map((c, i) => (
-                <View key={i} style={[styles.counterBadge, c.isTemp && styles.tempCounterBadge]}>
+                <View key={i} style={[styles.counterBadgeBelow, c.isTemp && styles.tempCounterBadge]}>
                   <Text style={styles.counterBadgeText}>{c.value > 1 ? c.value : ''}{c.name}</Text>
+                  <TouchableOpacity 
+                    style={styles.counterDecrementBtn}
+                    onPress={() => updatePT(card.instanceId, c.name.includes('p') ? 'p' : 't', -1)} 
+                  >
+                    <Minus color="#fff" size={8} />
+                  </TouchableOpacity>
                 </View>
               ))}
             </View>
-          </View>
-        )}
-
-        <View style={styles.ptOverlay}>
-          <TouchableOpacity style={styles.ptButton} onPress={() => updatePT(card.instanceId, 'p', -1)}>
-            <Minus color="#fff" size={10} />
-          </TouchableOpacity>
-          <Text style={styles.ptText}>{displayPT}</Text>
-          <TouchableOpacity style={styles.ptButton} onPress={() => updatePT(card.instanceId, 'p', 1)}>
-            <Plus color="#fff" size={10} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.zoneActionsContainer}>
-          <TouchableOpacity style={styles.zoneActionBtn} onPress={() => moveCard(card.instanceId, 'battlefield', 'graveyard')}>
-            <Trash2 color="#fff" size={10} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.zoneActionBtn} onPress={() => moveCard(card.instanceId, 'battlefield', 'exile')}>
-            <XCircle color="#fff" size={10} />
-          </TouchableOpacity>
-          {card.isCommander && (
-            <TouchableOpacity style={styles.zoneActionBtn} onPress={() => moveCard(card.instanceId, 'battlefield', 'command')}>
-              <RefreshCcw color="#fff" size={10} />
-            </TouchableOpacity>
           )}
-        </View>
 
-        {card.type_line?.includes('Land') && !card.isTapped && (
-          <View style={styles.landIndicator}>
-            <Zap color="#ffd700" size={8} fill="#ffd700" />
+          <View style={styles.ptAndZonesRow}>
+            {!card.type_line?.includes('Land') && (
+              <View style={styles.ptChip}>
+                <TouchableOpacity style={styles.ptMinorBtn} onPress={() => updatePT(card.instanceId, 'p', -1)}>
+                  <Minus color="#333" size={8} />
+                </TouchableOpacity>
+                <Text style={styles.ptTextSmall}>{displayPT}</Text>
+                <TouchableOpacity style={styles.ptMinorBtn} onPress={() => updatePT(card.instanceId, 'p', 1)}>
+                  <Plus color="#333" size={8} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.zoneActionsRow}>
+              <TouchableOpacity style={styles.zoneActionCircle} onPress={() => moveCard(card.instanceId, 'battlefield', 'graveyard')}>
+                <Trash2 color="#fff" size={10} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.zoneActionCircle} onPress={() => moveCard(card.instanceId, 'battlefield', 'exile')}>
+                <XCircle color="#fff" size={10} />
+              </TouchableOpacity>
+              {card.isCommander && (
+                <TouchableOpacity style={styles.zoneActionCircle} onPress={() => moveCard(card.instanceId, 'battlefield', 'command')}>
+                  <RefreshCcw color="#fff" size={10} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        )}
+        </View>
       </View>
     );
   };
 
-  const toggleTap = (id) => {
-    const card = battlefield.find(c => c.instanceId === id);
-    if (!card) return;
-    
-    if (card.quantity > 1) {
-      setModalQuantity(1);
-      setActiveQuantityAction({ action: 'TAP', card, max: card.quantity });
-    } else {
-      executeActionOnQuantity(card, 1, 'TAP');
-    }
-  };
 
   const deleteCard = (id) => {
     const card = battlefield.find(c => c.instanceId === id);
@@ -832,6 +866,8 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     if (!token) return;
     pushHistory();
     const { name, p, t } = token;
+    const normP = p ?? 1;
+    const normT = t ?? 1;
     const artUrl = customArt || 'https://cards.scryfall.io/normal/front/5/8/5859600a-2007-4f93-9c88-e2074f939c88.jpg';
     const artifactTokens = ['Treasure', 'Clue', 'Food'];
     const isArtifactToken = artifactTokens.includes(name);
@@ -847,10 +883,11 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
       c.image_uris?.normal === artUrl &&
       !c.isTapped &&
       c.hasSickness === tokenSick &&
-      c.baseP === p &&
-      c.baseT === t &&
+      c.baseP === normP &&
+      c.baseT === normT &&
       (c.counters || []).every(ct => ct.value === 0)
     );
+
 
     if (existingIdx !== -1) {
       setBattlefield(prev => prev.map((c, idx) =>
@@ -860,10 +897,10 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
       const newToken = {
         instanceId: `token-${Math.random().toString(36).slice(2, 11)}`,
         name: fullName,
-        power: p !== null ? p.toString() : null,
-        toughness: t !== null ? t.toString() : null,
-        baseP: p,
-        baseT: t,
+        power: normP.toString(),
+        toughness: normT.toString(),
+        baseP: normP,
+        baseT: normT,
         type_line: isArtifactToken ? 'Token Artifact' : 'Token Creature',
         counters: [],
         isTapped: false,
@@ -1216,16 +1253,39 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
             <View style={styles.headerLifeArea}>
               <View style={styles.manaHUD}>
                 {['C', 'B', 'U', 'G', 'W', 'R'].map(color => {
-                  const count = getAvailableMana()[color];
+                  const potential = getAvailableMana()[color];
+                  const floating = manaPool[color];
+                  const total = potential + floating;
                   return (
-                    <View 
+                    <TouchableOpacity 
                       key={color} 
-                      style={[styles.manaGem, styles[`manaGem${color}`], count === 0 && styles.emptyGem]}
+                      style={[styles.manaGem, styles[`manaGem${color}`], total === 0 && styles.emptyGem]}
+                      onPress={() => addManaToPool(color, 1)}
+                      onLongPress={() => setManaPool(prev => ({ ...prev, [color]: Math.max(0, prev[color] - 1) }))}
                     >
-                      <Text style={[styles.manaGemText, color === 'W' && {color: '#333'}]}>{count > 0 ? count : ''}</Text>
-                    </View>
+                      <Text style={[styles.manaGemText, color === 'W' && {color: '#333'}]}>
+                        {floating > 0 ? floating : (potential > 0 ? potential : '')}
+                      </Text>
+                      {floating > 0 && potential > 0 && (
+                        <View style={styles.floatingIndicator} />
+                      )}
+                    </TouchableOpacity>
                   );
                 })}
+                <View style={styles.manaActions}>
+                  <TouchableOpacity 
+                    style={styles.manaActionBtnSmall} 
+                    onPress={() => setManaPool({ W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 })}
+                  >
+                    <Trash2 color="#999" size={12} />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.manaActionBtnSmall, manaPersistence && styles.manaPersistenceActive]} 
+                    onPress={() => setManaPersistence(!manaPersistence)}
+                  >
+                    <RefreshCcw color={manaPersistence ? "#fff" : "#999"} size={12} />
+                  </TouchableOpacity>
+                </View>
               </View>
               <Text style={styles.oppLifeTitle}>OPPONENT</Text>
               <View style={styles.lifeRow}>
@@ -1399,17 +1459,12 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                           <Text style={styles.hMenuText}>ZOOM</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
-                          style={[styles.hMenuBtn, { backgroundColor: '#b30000' }]} 
-                          onPress={(e) => { e.stopPropagation(); playCard(card.instanceId); }}
-                        >
-                          <Text style={[styles.hMenuText, { color: '#fff' }]}>PLAY</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
                           style={[styles.hMenuBtn, { backgroundColor: '#333' }]} 
                           onPress={(e) => { e.stopPropagation(); moveCard(card.instanceId, 'hand', 'graveyard'); }}
                         >
                           <Text style={[styles.hMenuText, { color: '#fff' }]}>DISCARD</Text>
                         </TouchableOpacity>
+
                       </View>
                     )}
                     {hand.length > 7 && (
@@ -1817,7 +1872,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                   {loadingTokenArt ? (
                     <ActivityIndicator color="#b30000" size="large" style={{ margin: 40 }} />
                   ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ flex: 1 }} contentContainerStyle={styles.artList}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ flex: 1, width: '100%' }} contentContainerStyle={styles.artList}>
                       {tokenArtOptions.length > 0 ? tokenArtOptions.map((print, idx) => (
                         <TouchableOpacity key={idx} style={styles.artOption} onPress={() => {
                           const img = ScryfallService.getImageUrl(print);
@@ -2104,6 +2159,50 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
             <Text style={styles.searchFooterText}>Tutor cards back to any zone. Long-press to zoom.</Text>
           </View>
         </View>
+      </Modal>
+
+      {/* Mana Picker Modal */}
+      <Modal visible={!!showManaPicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowManaPicker(null)}>
+          <View style={styles.manaPickerBox}>
+            <Text style={styles.modalTitle}>ADD MANA TO POOL</Text>
+            
+            <View style={styles.manaColorGrid}>
+              {['W','U','B','R','G','C'].map(c => (
+                <TouchableOpacity 
+                   key={c} 
+                   style={[styles.manaColorBtn, styles[`manaGem${c}`]]}
+                   onPress={() => {
+                     addManaToPool(c, modalQuantity);
+                     setModalQuantity(1);
+                     setShowManaPicker(null);
+                     // If it was a card, tap it
+                     if (showManaPicker) toggleTap(showManaPicker, true);
+                   }}
+                >
+                  <Text style={[styles.manaColorText, c === 'W' && {color: '#333'}]}>{c}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.qtyControlsMana}>
+              <TouchableOpacity onPress={() => setModalQuantity(Math.max(1, modalQuantity - 1))} style={styles.qtyBtn}>
+                <Minus color="#333" size={20} />
+              </TouchableOpacity>
+              <Text style={styles.qtyVal}>{modalQuantity}</Text>
+              <TouchableOpacity onPress={() => setModalQuantity(modalQuantity + 1)} style={styles.qtyBtn}>
+                <Plus color="#333" size={20} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.startTargetingBtn, { marginTop: 20 }]} 
+              onPress={() => setShowManaPicker(null)}
+            >
+              <Text style={styles.startTargetingBtnText}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
       </Modal>
 
       {/* Universal Card Gallery Modal */}
@@ -2771,12 +2870,96 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     width: 100,
-    aspectRatio: 0.72,
-    marginBottom: 15,
-    position: 'relative',
+    marginBottom: 20,
     borderRadius: 8,
-    backgroundColor: 'transparent',
+    backgroundColor: '#fff',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
   },
+  cardImageSection: {
+    width: 100,
+    height: 140,
+    position: 'relative',
+    backgroundColor: '#eee',
+  },
+  cardServiceSection: {
+    padding: 4,
+    backgroundColor: '#fff',
+    gap: 4,
+  },
+  counterListBelow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 3,
+    marginBottom: 2,
+  },
+  counterBadgeBelow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    paddingLeft: 6,
+    paddingRight: 2,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 4,
+  },
+  counterDecrementBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ptAndZonesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  ptChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  ptMinorBtn: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  ptTextSmall: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#333',
+  },
+  zoneActionsRow: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  zoneActionCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#b30000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   cardImage: {
     width: '100%',
     height: '100%',
@@ -2977,70 +3160,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffd700',
   },
-  topCardOverlay: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    zIndex: 10,
-  },
-  counterList: {
-    flexDirection: 'column',
-    gap: 2,
-  },
-  counterBadge: {
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-  },
-  counterBadgeText: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: '900',
-  },
-  ptOverlay: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  ptText: {
-    color: '#333',
-    fontWeight: '900',
-    fontSize: 11,
-  },
-  zoneActionsContainer: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    flexDirection: 'row',
-    gap: 4,
-    zIndex: 100,
-  },
-  zoneActionBtn: {
-    backgroundColor: '#b30000',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#fff',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 1,
-  },
+
   bottomArea: {
     backgroundColor: '#fff',
     borderTopWidth: 1,
@@ -3646,6 +3766,7 @@ const styles = StyleSheet.create({
   artPickerContainer: {
     width: '100%',
     alignItems: 'center',
+    flex: 1,
   },
   artPickerSubtitle: {
     fontSize: 9,
@@ -3659,7 +3780,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     gap: 10,
     alignItems: 'center',
+    minWidth: '100%',
+    ...(Platform.OS === 'web' ? { WebkitOverflowScrolling: 'touch' } : {}),
   },
+
   artOption: {
     alignItems: 'center',
     marginHorizontal: 6,
@@ -4172,4 +4296,88 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
   },
+  actionBtnMana: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffd700',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 3,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
+  manaPickerBox: {
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    padding: 25,
+    width: '85%',
+    maxWidth: 340,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  manaColorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  manaColorBtn: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    elevation: 2,
+  },
+  manaColorText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  qtyControlsMana: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  floatingIndicator: {
+    position: 'absolute',
+    bottom: -2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#fff',
+  },
+  manaActions: {
+    flexDirection: 'row',
+    gap: 4,
+    marginLeft: 4,
+  },
+  manaActionBtnSmall: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  manaPersistenceActive: {
+    backgroundColor: '#2d8a4e',
+    borderColor: '#2d8a4e',
+  },
 });
+

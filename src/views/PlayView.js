@@ -1173,9 +1173,10 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
       ) : (
         <>
           {/* Game Header */}
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              automaticallyAdjustContentInsets={false}
               style={styles.gameHeaderScroll}
               contentContainerStyle={styles.gameHeaderContent}
             >
@@ -2124,51 +2125,55 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
               <XCircle color="#333" size={24} />
             </TouchableOpacity>
           </View>
-          
-          <FlatList
-            style={{ flex: 1 }}
-            data={showZoneModal === 'exile' ? exile : graveyard}
-            keyExtractor={(item) => item.instanceId}
-            renderItem={({ item }) => (
-              <TouchableOpacity 
-                style={styles.searchItem}
-                onLongPress={() => openGallery(showZoneModal === 'exile' ? exile : graveyard, item)}
-              >
-                <Image 
-                  source={{ uri: ScryfallService.getImageUrl(item, 'small') }} 
-                  style={styles.searchThumb} 
-                />
-                <View style={styles.searchItemInfo}>
-                  <Text style={styles.searchItemName}>{item.name}</Text>
-                  <Text style={styles.searchItemType}>{item.type_line}</Text>
-                </View>
-                <View style={[styles.searchActions, {flexWrap: 'wrap', maxWidth: 150, justifyContent: 'flex-end'}]}>
-                  <TouchableOpacity
-                    style={styles.searchActionBtn}
-                    onPress={() => { moveCard(item.instanceId, showZoneModal, 'hand'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
-                  >
-                    <Text style={styles.searchActionText}>HAND</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.searchActionBtn}
-                    onPress={() => { moveCard(item.instanceId, showZoneModal, 'battlefield'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
-                  >
-                    <Text style={styles.searchActionText}>FIELD</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.searchActionBtn, styles.searchActionBtnPrimary]}
-                    onPress={() => { moveCard(item.instanceId, showZoneModal, 'library'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
-                  >
-                    <Text style={[styles.searchActionText, {color: '#fff'}]}>DECK</Text>
-                  </TouchableOpacity>
 
-                </View>
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={{ padding: 15 }}
-          />
+          <View style={{ flex: 1 }}>
+            <ScrollView
+              nestedScrollEnabled={true}
+              scrollEnabled={true}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ padding: 15 }}
+            >
+              {(showZoneModal === 'exile' ? exile : graveyard).map(item => (
+                <TouchableOpacity
+                  key={item.instanceId}
+                  style={styles.searchItem}
+                  onPress={() => openGallery(showZoneModal === 'exile' ? exile : graveyard, item)}
+                >
+                  <Image
+                    source={{ uri: ScryfallService.getImageUrl(item, 'small') }}
+                    style={styles.searchThumb}
+                  />
+                  <View style={styles.searchItemInfo}>
+                    <Text style={styles.searchItemName}>{item.name}</Text>
+                    <Text style={styles.searchItemType}>{item.type_line}</Text>
+                  </View>
+                  <View style={[styles.searchActions, { flexWrap: 'wrap', maxWidth: 150, justifyContent: 'flex-end' }]}>
+                    <TouchableOpacity
+                      style={styles.searchActionBtn}
+                      onPress={() => { moveCard(item.instanceId, showZoneModal, 'hand'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
+                    >
+                      <Text style={styles.searchActionText}>HAND</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.searchActionBtn}
+                      onPress={() => { moveCard(item.instanceId, showZoneModal, 'battlefield'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
+                    >
+                      <Text style={styles.searchActionText}>FIELD</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.searchActionBtn, styles.searchActionBtnPrimary]}
+                      onPress={() => { moveCard(item.instanceId, showZoneModal, 'library'); if ((showZoneModal === 'exile' ? exile : graveyard).length <= 1) setShowZoneModal(null); }}
+                    >
+                      <Text style={[styles.searchActionText, { color: '#fff' }]}>DECK</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
           <View style={styles.searchFooter}>
-            <Text style={styles.searchFooterText}>Tutor cards back to any zone. Long-press to zoom.</Text>
+            <Text style={styles.searchFooterText}>Tap a card to zoom. Use buttons to move it.</Text>
           </View>
         </View>
       </Modal>
@@ -2553,7 +2558,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 15,
   },
   backButton: {
@@ -2607,7 +2612,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 4,
+    paddingVertical: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
@@ -2672,7 +2677,7 @@ const styles = StyleSheet.create({
   stockArea: {
     flexDirection: 'row',
     paddingHorizontal: 15,
-    paddingVertical: 5,
+    paddingVertical: 8,
     backgroundColor: '#fafafa',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -3900,7 +3905,7 @@ const styles = StyleSheet.create({
   searchModalContainer: {
     flex: 1,
     backgroundColor: '#fff',
-    marginTop: 50,
+    marginTop: Platform.OS === 'ios' ? 100 : 50,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     shadowColor: '#000',

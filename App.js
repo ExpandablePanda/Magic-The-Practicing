@@ -13,7 +13,7 @@ import ScoreView from './src/views/ScoreView';
 import StatsView from './src/views/StatsView';
 import WebShell from './src/components/WebShell';
 
-const APP_VERSION = 'V1.6.9';
+const APP_VERSION = 'v1.7.6';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('landing');
@@ -117,7 +117,9 @@ export default function App() {
     <WebShell>
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.brand}>Magic: The <Text style={styles.brandRed}>Practicing</Text></Text>
+          <View style={styles.headerCentered}>
+            <Text style={styles.brand}>Magic: The <Text style={styles.brandRed}>Practicing</Text></Text>
+          </View>
           <Text style={styles.versionInside}>{APP_VERSION}</Text>
         </View>
 
@@ -183,17 +185,31 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 25,
-    paddingTop: 15,
-    paddingBottom: 10,
+    paddingTop: 0,
+    paddingBottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
+    backgroundColor: '#fff',
+    height: 30,
+    position: 'relative',
+  },
+  headerCentered: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   brand: {
     fontSize: 20,
     fontWeight: '900',
     color: '#1a1a1a',
     letterSpacing: -1,
+    marginTop: 0,
+    lineHeight: 20,
   },
   brandRed: {
     color: '#b30000',
@@ -203,6 +219,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#ccc',
     letterSpacing: 0.5,
+    lineHeight: 10,
   },
   content: {
     flex: 1,

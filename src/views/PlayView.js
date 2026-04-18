@@ -125,6 +125,9 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
   const [pendingToken, setPendingToken] = useState({ name: '', p: null, t: null, abilities: [] });
   const [savedTokens, setSavedTokens] = useState([]); // { name, p, t, abilities, isHearted, url }
   const [tokenSearch, setTokenSearch] = useState('');
+  const [commanderLocation, setCommanderLocation] = useState('command'); // 'command' or 'battlefield'
+  const [selectedCommanderZone, setSelectedCommanderZone] = useState(null);
+  const [showCommanderMenu, setShowCommanderMenu] = useState(false);
 
   const galleryRef = useRef(null);
 
@@ -1193,124 +1196,97 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                     <FileText color="#ff8f00" size={14} />
                     <Text style={[styles.undoText, { color: '#ff8f00' }]}>NOTES</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.manaPersistenceBtnHeader, manaPersistence && styles.manaPersistenceActiveHeader]} 
                     onPress={() => setManaPersistence(!manaPersistence)}
                   >
                     <RefreshCcw color={manaPersistence ? "#fff" : "#ff8f00"} size={14} />
                     <Text style={[styles.undoText, { color: manaPersistence ? "#fff" : "#ff8f00" }]}>MANA SYNC</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={undo} disabled={history.length === 0} style={[styles.undoButton, history.length === 0 && {opacity: 0.3}]}>
-                    <RotateCcw color="#b30000" size={14} />
-                    <Text style={styles.undoText}>UNDO</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.resetButton, !fullDeckData && { opacity: 0.3 }]} disabled={!fullDeckData} onPress={() => { if (turnNumber > 1) setShowResultModal(true); else selectDeck(fullDeckData); }}>
-                    <RefreshCcw color="#b30000" size={20} />
-                  </TouchableOpacity>
                 </View>
               </View>
             </ScrollView>
 
-          {/* Stock Area (Library/GY/Exile) */}
-          <View style={styles.stockArea}>
-            <View style={styles.stockItem}>
-              <TouchableOpacity onPress={() => setShowLibraryMenu(true)}>
-                <Image source={{ uri: CARD_BACK_URL }} style={styles.stockCardBack} />
-                <View style={styles.stockCount}><Text style={styles.stockCountText}>{library.length}</Text></View>
-              </TouchableOpacity>
-              <Text style={styles.stockLabel}>LIBRARY</Text>
-            </View>
-
-            {fullDeckData?.commander && (
+          <View style={[styles.stockArea, { height: 110, paddingVertical: 0 }]}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={[styles.stockContent, { height: 110 }]}
+              style={{ overflow: 'visible' }}
+            >
               <View style={styles.stockItem}>
                 <TouchableOpacity 
-                  onPress={toggleCommanderSelection} 
-                  onLongPress={() => openGallery([fullDeckData.commander], fullDeckData.commander)}
-                  disabled={battlefield.some(c => c.instanceId === 'commander')}
+                  style={styles.zoneBox} 
+                  onPress={() => setShowLibraryMenu(true)}
+                  onLongPress={shuffleLibrary}
                 >
-                  <View style={[
-                    styles.stockCardBack, 
-                    battlefield.some(c => c.instanceId === 'commander') && styles.emptyStock,
-                    isCommanderSelected && styles.selectedCommanderZone
-                  ]}>
-                    {!battlefield.some(c => c.instanceId === 'commander') ? (
-                      <Image 
-                        source={{ uri: ScryfallService.getImageUrl(fullDeckData.commander, 'small') }} 
-                        style={styles.stockCardBack} 
-                      />
-                    ) : (
-                      <User color="#ccc" size={24} />
-                    )}
+                  <Image source={{ uri: CARD_BACK_URL }} style={styles.commanderThumb} />
+                  <View style={styles.zoneBadge}>
+                    <Text style={styles.zoneBadgeText}>{library.length}</Text>
                   </View>
                 </TouchableOpacity>
-                <Text style={styles.stockLabel}>COMMAND</Text>
+                <Text style={styles.zoneLabel}>LIBRARY</Text>
               </View>
-            )}
-            
-            <View style={styles.stockItem}>
-              <TouchableOpacity 
-                onPress={() => setShowZoneModal('graveyard')}
-                disabled={graveyard.length === 0}
-              >
-                <View style={[styles.stockCardBack, styles.emptyStock]}>
-                  {graveyard.length > 0 ? <Image source={{ uri: ScryfallService.getImageUrl(graveyard[0], 'small') }} style={styles.stockCardBack} /> : <Trash2 color="#ccc" size={24} />}
-                  <View style={styles.stockCount}><Text style={styles.stockCountText}>{graveyard.length}</Text></View>
-                </View>
-              </TouchableOpacity>
-              <Text style={styles.stockLabel}>GRAVEYARD</Text>
-            </View>
 
-            <View style={styles.stockItem}>
-              <TouchableOpacity 
-                onPress={() => setShowZoneModal('exile')}
-                disabled={exile.length === 0}
-              >
-                <View style={[styles.stockCardBack, styles.emptyStock]}>
-                  {exile.length > 0 ? <Image source={{ uri: ScryfallService.getImageUrl(exile[0], 'small') }} style={styles.stockCardBack} /> : <XCircle color="#ccc" size={24} />}
-                  <View style={styles.stockCount}><Text style={styles.stockCountText}>{exile.length}</Text></View>
-                </View>
-              </TouchableOpacity>
-              <Text style={styles.stockLabel}>EXILE</Text>
-            </View>
-
-            <View style={styles.headerLifeArea}>
-              <View style={styles.manaHUD}>
-                {['C', 'B', 'U', 'G', 'W', 'R'].map(color => {
-                  const potential = getAvailableMana()[color];
-                  const floating = manaPool[color];
-                  const total = potential + floating;
-                  return (
-                    <TouchableOpacity 
-                      key={color} 
-                      style={[styles.manaGem, styles[`manaGem${color}`], total === 0 && styles.emptyGem]}
-                      onPress={() => addManaToPool(color, 1)}
-                      onLongPress={() => setManaPool(prev => ({ ...prev, [color]: Math.max(0, prev[color] - 1) }))}
-                    >
-                      <Text style={[styles.manaGemText, color === 'W' && {color: '#333'}]}>
-                        {floating > 0 ? floating : (potential > 0 ? potential : '')}
-                      </Text>
-                      {floating > 0 && potential > 0 && (
-                        <View style={styles.floatingIndicator} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-                <View style={styles.manaActions}>
+              {/* Commander Zone if exists */}
+              {fullDeckData?.commander && (
+                <View style={styles.stockItem}>
                   <TouchableOpacity 
-                    style={styles.manaActionBtnSmall} 
-                    onPress={() => setManaPool({ W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 })}
+                    style={[styles.zoneBox, selectedCommanderZone && styles.selectedCommanderZone]} 
+                    onPress={() => {
+                      if (selectedCommanderZone) {
+                        setCommanderLocation(selectedCommanderZone);
+                        setSelectedCommanderZone(null);
+                      } else {
+                        setShowCommanderMenu(true);
+                      }
+                    }}
                   >
-                    <Trash2 color="#999" size={12} />
+                    <Image source={{ uri: fullDeckData.commander.image_uris?.small || fullDeckData.commander.image_uris?.normal }} style={styles.commanderThumb} />
+                    <View style={styles.zoneBadge}>
+                      <Text style={styles.zoneBadgeText}>{commanderLocation === 'command' ? 'C' : 'B'}</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <Text style={styles.zoneLabel}>COMMANDER</Text>
+                </View>
+              )}
+
+              <View style={styles.stockItem}>
+                <TouchableOpacity style={styles.zoneBox} onPress={() => setShowZoneModal('graveyard')}>
+                  <RefreshCcw color="#333" size={24} />
+                  <View style={styles.zoneBadge}>
+                    <Text style={styles.zoneBadgeText}>{graveyard.length}</Text>
+                  </View>
+                </TouchableOpacity>
+                <Text style={styles.zoneLabel}>GRAVEYARD</Text>
+              </View>
+
+              <View style={styles.stockItem}>
+                <TouchableOpacity style={styles.zoneBox} onPress={() => setShowZoneModal('exile')}>
+                  <Trash2 color="#333" size={24} />
+                  <View style={styles.zoneBadge}>
+                    <Text style={styles.zoneBadgeText}>{exile.length}</Text>
+                  </View>
+                </TouchableOpacity>
+                <Text style={styles.zoneLabel}>EXILE</Text>
+              </View>
+
+              <View style={styles.headerLifeArea}>
+                <Text style={styles.oppLifeTitle}>OPPONENT</Text>
+                <View style={styles.oppLifeDisplay}>
+                  <TouchableOpacity onPress={() => setOppLife(prev => prev - 1)}>
+                    <Minus color="#fff" size={20} />
+                  </TouchableOpacity>
+                  <View style={styles.playerLifeCircle}>
+                    <Heart color="#fff" size={10} fill="#fff" />
+                    <Text style={[styles.playerLifeText, { fontSize: 14 }]}>{oppLife}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setOppLife(prev => prev + 1)}>
+                    <Plus color="#fff" size={20} />
                   </TouchableOpacity>
                 </View>
               </View>
-              <Text style={styles.oppLifeTitle}>OPPONENT</Text>
-              <View style={styles.lifeRow}>
-                <TouchableOpacity onPress={() => setOppLife(prev => prev - 1)}><Minus color="#b30000" size={24} /></TouchableOpacity>
-                <Text style={styles.lifeValSmall}>{oppLife}</Text>
-                <TouchableOpacity onPress={() => setOppLife(prev => prev + 1)}><Plus color="#b30000" size={24} /></TouchableOpacity>
-              </View>
-            </View>
+            </ScrollView>
           </View>
 
           {/* Battlefield */}
@@ -1342,34 +1318,66 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
             <Plus color="#999" size={14} />
             <Text style={styles.addEmblemText}>ADD EFFECT</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity onPress={undo} disabled={history.length === 0} style={[styles.emblemChip, { borderColor: '#b30000', marginLeft: 8 }, history.length === 0 && {opacity: 0.3}]}>
+            <RotateCcw color="#b30000" size={12} />
+            <Text style={[styles.emblemText, { color: '#b30000' }]}>UNDO</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.emblemChip, { borderColor: '#b30000' }]} 
+            disabled={!fullDeckData} 
+            onPress={() => { if (turnNumber > 1) setShowResultModal(true); else selectDeck(fullDeckData); }}
+          >
+            <RefreshCcw color="#b30000" size={12} />
+            <Text style={[styles.emblemText, { color: '#b30000' }]}>RESTART</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
       <View style={styles.battlefieldContainer}>
+            {/* Mana HUD Overlay */}
+            <View style={styles.battlefieldHUD}>
+              <View style={[styles.manaHUD, { marginBottom: 0 }]}>
+                {['C', 'B', 'U', 'G', 'W', 'R'].map(color => {
+                  const potential = (typeof getAvailableMana === 'function' ? getAvailableMana()[color] : 0);
+                  const floating = manaPool[color];
+                  const total = potential + floating;
+                  return (
+                    <TouchableOpacity 
+                      key={color} 
+                      style={[styles.manaGem, styles[`manaGem${color}`], total === 0 && styles.emptyGem]}
+                      onPress={() => addManaToPool(color, 1)}
+                      onLongPress={() => setManaPool(prev => ({ ...prev, [color]: Math.max(0, prev[color] - 1) }))}
+                    >
+                      <Text style={[styles.manaGemText, color === 'W' && {color: '#333'}]}>
+                        {floating > 0 ? floating : (potential > 0 ? potential : '')}
+                      </Text>
+                      {floating > 0 && potential > 0 && (
+                        <View style={styles.floatingIndicator} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+                <View style={styles.manaActions}>
+                  <TouchableOpacity 
+                    style={styles.manaActionBtnSmall} 
+                    onPress={() => setManaPool({ W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 })}
+                  >
+                    <Trash2 color="#999" size={12} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
             {shuffleToast && (
               <View style={styles.shuffleToast} pointerEvents="none">
                 <Text style={styles.shuffleToastText}>🔀 Library Shuffled</Text>
               </View>
             )}
-            {mulliganCount > 0 && !bottomingState && !hasPlayedCardThisTurn && (
-              <View style={styles.mulliganChip}>
-                <Text style={styles.mulliganChipLabel}>MULLIGAN {mulliganCount}×</Text>
-                <TouchableOpacity style={styles.mulliganChipBtn} onPress={() => setShowMulliganModal(true)}>
-                  <Text style={styles.mulliganChipBtnText}>MULL AGAIN</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.mulliganChipBtn, styles.mulliganChipKeep, { backgroundColor: '#2d8a4e' }]}
-                  onPress={() => {
-                    setBottomingState({ required: mulliganCount, selected: new Set(), hand: [...hand], library: [...library] });
-                  }}
-                >
-                  <Text style={[styles.mulliganChipBtnText, { color: '#fff' }]}>KEEP HAND</Text>
-                </TouchableOpacity>
-              </View>
-            )}
             <ScrollView
               style={styles.battlefieldScroll}
-              contentContainerStyle={styles.battlefieldContent}
+              contentContainerStyle={[styles.battlefieldContent, { paddingTop: 45 }, mulliganCount > 0 && { paddingBottom: 80 }]}
               scrollEnabled={!isTargeting}
             >
               {battlefield.length === 0 ? (
@@ -1401,6 +1409,24 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                   <Text style={styles.dropZoneCancelText}>✕ CANCEL</Text>
                 </TouchableOpacity>
               </Pressable>
+            )}
+
+            {/* Mulligan Banner (Floating at Bottom) */}
+            {mulliganCount > 0 && !bottomingState && !hasPlayedCardThisTurn && (
+              <View style={styles.mulliganChip}>
+                <Text style={styles.mulliganChipLabel}>MULLIGAN {mulliganCount}×</Text>
+                <TouchableOpacity style={styles.mulliganChipBtn} onPress={() => setShowMulliganModal(true)}>
+                  <Text style={styles.mulliganChipBtnText}>MULL AGAIN</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.mulliganChipBtn, styles.mulliganChipKeep, { backgroundColor: '#2d8a4e' }]}
+                  onPress={() => {
+                    setBottomingState({ required: mulliganCount, selected: new Set(), hand: [...hand], library: [...library] });
+                  }}
+                >
+                  <Text style={[styles.mulliganChipBtnText, { color: '#fff' }]}>KEEP HAND</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -1652,7 +1678,6 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                   <TouchableOpacity onPress={() => { setShowTokenModal(false); setTokenStep(1); }}>
                     <XCircle color="#333" size={24} />
                   </TouchableOpacity>
-                </View>
                 </View>
 
                 {/* Main Content Area */}
@@ -2545,6 +2570,10 @@ const styles = StyleSheet.create({
   },
   gameHeaderScroll: {
     backgroundColor: '#fff',
+    height: 46,
+    maxHeight: 46,
+    flex: 0,
+    marginBottom: 0,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
@@ -2552,17 +2581,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    gap: 15,
+    height: 46,
+    paddingVertical: 0,
+    gap: 8,
   },
   backButton: {
-    paddingRight: 15,
+    paddingRight: 5,
   },
   headerTitleGroup: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15,
+    gap: 8,
   },
   undoButton: {
     flexDirection: 'row',
@@ -2636,6 +2665,8 @@ const styles = StyleSheet.create({
   },
   emblemChip: {
     backgroundColor: '#fff8e1',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 15,
@@ -2644,6 +2675,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     height: 30,
     justifyContent: 'center',
+    gap: 6,
   },
   emblemText: {
     fontSize: 10,
@@ -2670,16 +2702,69 @@ const styles = StyleSheet.create({
   },
   stockArea: {
     flexDirection: 'row',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: '#fafafa',
+    paddingVertical: 20,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     alignItems: 'center',
-    gap: 16,
+    overflow: 'visible',
+  },
+  stockContent: {
+    paddingHorizontal: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
   },
   stockItem: {
     alignItems: 'center',
+    paddingTop: 12,
+  },
+  zoneBox: {
+    width: 44,
+    height: 62,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+  },
+  zoneBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#b30000',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fff',
+    zIndex: 10,
+  },
+  zoneBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  zoneLabel: {
+    fontSize: 7,
+    fontWeight: '900',
+    marginTop: 4,
+    color: '#666',
+    letterSpacing: 1,
+  },
+  commanderThumb: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
   },
   stockCardBack: {
     width: 44,
@@ -2750,7 +2835,8 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   headerLifeArea: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   oppLifeTitle: {
     fontSize: 7,
@@ -2763,12 +2849,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  oppLifeDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    height: 38,
+    borderRadius: 19,
+    paddingHorizontal: 10,
+    gap: 8,
+    marginTop: 2,
+  },
   lifeValSmall: {
     fontSize: 24,
     fontWeight: '900',
     color: '#333',
     minWidth: 30,
     textAlign: 'center',
+  },
+  battlefieldHUD: {
+    position: 'absolute',
+    top: 10,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 200,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
   },
   battlefieldContainer: {
     flex: 1,
@@ -2781,14 +2896,23 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   mulliganChip: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
     backgroundColor: '#1a0b2e',
-    borderBottomWidth: 1,
-    borderBottomColor: '#a855f733',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    zIndex: 300,
   },
   mulliganChipLabel: {
     color: '#d8b4fe',

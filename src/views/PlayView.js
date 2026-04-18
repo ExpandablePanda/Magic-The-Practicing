@@ -185,6 +185,8 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
     setShowMulliganModal(false);
     setTurnNumber(1);
     setHistory([]);
+    setSelectedHandId(null);
+    setIsCommanderSelected(false);
 
     setMyLife(isEDH ? 40 : 20);
     setOppLife(isEDH ? 40 : 20);
@@ -632,36 +634,36 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
             <View style={styles.cardActionsOverlay}>
               {!card.type_line?.includes('Land') && !card.hasSickness && (
                 <TouchableOpacity style={styles.actionBtnCombat} onPress={() => attackWithCard(card)}>
-                  <Sword color="#fff" size={16} />
+                  <Sword color="#fff" size={11} />
                   <Text style={styles.actionBtnText}>ATTACK</Text>
                 </TouchableOpacity>
               )}
               {card.quantity > 1 && (
                 <TouchableOpacity style={styles.actionBtnSplit} onPress={() => splitStack(card.instanceId)}>
-                  <LayoutGrid color="#fff" size={16} />
+                  <LayoutGrid color="#fff" size={11} />
                   <Text style={styles.actionBtnText}>SPLIT</Text>
                 </TouchableOpacity>
               )}
               {card.hasSickness && (
                 <TouchableOpacity style={styles.actionBtnHaste} onPress={() => grantHaste(card.instanceId)}>
-                  <Zap color="#fff" size={16} fill="#fff" />
+                  <Zap color="#fff" size={11} fill="#fff" />
                   <Text style={styles.actionBtnText}>HASTE</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={styles.actionBtnTap} onPress={() => toggleTap(card.instanceId)}>
-                <RotateCcw color="#fff" size={16} />
+                <RotateCcw color="#fff" size={11} />
                 <Text style={styles.actionBtnText}>
                   {card.isTapped ? 'UNTAP' : 'TAP'}
                 </Text>
               </TouchableOpacity>
               {card.type_line?.includes('Land') && !card.isTapped && (
                 <TouchableOpacity style={styles.actionBtnETBTapped} onPress={() => toggleTap(card.instanceId)}>
-                  <Layers color="#fff" size={16} />
+                  <Layers color="#fff" size={11} />
                   <Text style={styles.actionBtnText}>ETB TAPPED</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={styles.actionBtnClose} onPress={() => setActiveActionId(null)}>
-                <Text style={styles.actionBtnText}>CLOSE</Text>
+                <Text style={[styles.actionBtnText, { color: '#999' }]}>CLOSE</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1306,14 +1308,20 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
 
             {/* THE GREAT FIX: Drop Zone Overlay */}
             {(selectedHandId || isCommanderSelected) && (
-              <Pressable 
-                style={styles.dropZoneOverlay} 
+              <Pressable
+                style={styles.dropZoneOverlay}
                 onPress={() => isCommanderSelected ? castCommander() : playCard(selectedHandId)}
               >
                 <View style={styles.dropZoneIndicator}>
                   <Plus color="#fff" size={32} />
                   <Text style={styles.dropZoneText}>TAP ANYWHERE TO PLACE CARD</Text>
                 </View>
+                <TouchableOpacity
+                  style={styles.dropZoneCancel}
+                  onPress={(e) => { e.stopPropagation(); setSelectedHandId(null); setIsCommanderSelected(false); }}
+                >
+                  <Text style={styles.dropZoneCancelText}>✕ CANCEL</Text>
+                </TouchableOpacity>
               </Pressable>
             )}
           </View>
@@ -1559,7 +1567,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
 
       {/* Token Creation Modal */}
       <Modal visible={showTokenModal} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowTokenModal(false)}>
+        <Pressable style={styles.modalOverlay}>
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 10}
@@ -1739,11 +1747,11 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                    <View style={styles.ptInputContainer}>
                      <Text style={styles.ptInputLabel}>POWER</Text>
                      <View style={styles.ptStepper}>
-                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: (parseInt(prev.p) || 0) - 1 }))}>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: Math.max(0, (prev.p ?? 1) - 1) }))}>
                           <Minus color="#b30000" size={18} />
                         </TouchableOpacity>
-                        <Text style={styles.stepperVal}>{pendingToken.p ?? 0}</Text>
-                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: (parseInt(prev.p) || 0) + 1 }))}>
+                        <Text style={styles.stepperVal}>{pendingToken.p ?? 1}</Text>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, p: (prev.p ?? 1) + 1 }))}>
                           <Plus color="#b30000" size={18} />
                         </TouchableOpacity>
                      </View>
@@ -1751,11 +1759,11 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                    <View style={styles.ptInputContainer}>
                      <Text style={styles.ptInputLabel}>TOUGHNESS</Text>
                      <View style={styles.ptStepper}>
-                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: (parseInt(prev.t) || 0) - 1 }))}>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: Math.max(0, (prev.t ?? 1) - 1) }))}>
                           <Minus color="#b30000" size={18} />
                         </TouchableOpacity>
-                        <Text style={styles.stepperVal}>{pendingToken.t ?? 0}</Text>
-                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: (parseInt(prev.t) || 0) + 1 }))}>
+                        <Text style={styles.stepperVal}>{pendingToken.t ?? 1}</Text>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => setPendingToken(prev => ({ ...prev, t: (prev.t ?? 1) + 1 }))}>
                           <Plus color="#b30000" size={18} />
                         </TouchableOpacity>
                      </View>
@@ -1806,12 +1814,11 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                   {loadingTokenArt ? (
                     <ActivityIndicator color="#b30000" size="large" style={{ margin: 40 }} />
                   ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.artList}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={styles.artList}>
                       {tokenArtOptions.length > 0 ? tokenArtOptions.map((print, idx) => (
                         <TouchableOpacity key={idx} style={styles.artOption} onPress={() => {
                           const img = ScryfallService.getImageUrl(print);
                           spawnTokens(tokenQuantity, img, pendingToken.abilities);
-                          // Save to quick spawn bank
                           if (!savedTokens.some(s => s.name === pendingToken.name && s.p === pendingToken.p && s.t === pendingToken.t)) {
                              setSavedTokens(prev => [{ ...pendingToken, url: img, isHearted: false }, ...prev].slice(0, 15));
                           }
@@ -1819,9 +1826,6 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                           setTokenStep(1);
                         }}>
                           <Image source={{ uri: ScryfallService.getImageUrl(print, 'small') }} style={styles.artThumb} />
-                          <View style={styles.artLabelBox}>
-                            <Text style={styles.artSetName} numberOfLines={1}>{print.set_name}</Text>
-                          </View>
                         </TouchableOpacity>
                       )) : (
                         <TouchableOpacity style={styles.artOption} onPress={() => {
@@ -1830,7 +1834,6 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                           setTokenStep(1);
                         }}>
                           <View style={[styles.artThumb, {backgroundColor: '#eee', justifyContent:'center', alignItems:'center'}]}><LayoutGrid color="#ccc" /></View>
-                          <Text style={styles.artSetName}>Default Art</Text>
                         </TouchableOpacity>
                       )}
                     </ScrollView>
@@ -2743,6 +2746,18 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
   },
+  dropZoneCancel: {
+    marginTop: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  dropZoneCancelText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
   landIndicator: {
     position: 'absolute',
     bottom: 4,
@@ -2806,26 +2821,26 @@ const styles = StyleSheet.create({
   cardActionsOverlay: {
     position: 'absolute',
     inset: 0,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.93)',
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 5,
+    gap: 3,
     borderRadius: 6,
     zIndex: 50,
     borderWidth: 1,
     borderColor: '#eee',
     overflow: 'hidden',
-    padding: 4,
+    padding: 3,
   },
   actionBtnCombat: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#b30000',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 3,
     alignSelf: 'stretch',
     justifyContent: 'center',
   },
@@ -2833,10 +2848,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#333',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 3,
     alignSelf: 'stretch',
     justifyContent: 'center',
   },
@@ -2844,25 +2859,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#444',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 3,
     alignSelf: 'stretch',
     justifyContent: 'center',
   },
   actionBtnClose: {
-    marginTop: 5,
-    padding: 5,
+    marginTop: 2,
+    padding: 3,
   },
   actionBtnHaste: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffd700',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 3,
     alignSelf: 'stretch',
     justifyContent: 'center',
   },
@@ -2870,10 +2885,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#6c5ce7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 3,
     alignSelf: 'stretch',
     justifyContent: 'center',
   },
@@ -3642,11 +3657,11 @@ const styles = StyleSheet.create({
   },
   artOption: {
     alignItems: 'center',
-    width: 100,
+    marginHorizontal: 6,
   },
   artThumb: {
-    width: 80,
-    height: 110,
+    width: 90,
+    height: 126,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#eee',

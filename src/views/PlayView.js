@@ -1868,11 +1868,18 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                 ) : tokenStep === 5 ? (
                   <View style={styles.artPickerContainer}>
                     <Text style={styles.artPickerSubtitle}>CHOOSE ART FOR {pendingToken.name.toUpperCase()}</Text>
-                    <View style={{ height: 160 }}>
+                    <View style={{ height: 150, width: '100%' }}>
                       {loadingTokenArt ? (
                         <ActivityIndicator color="#b30000" size="large" style={{ margin: 40 }} />
                       ) : (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ flex: 1 }} contentContainerStyle={styles.artList}>
+                        <ScrollView
+                          horizontal
+                          nestedScrollEnabled={true}
+                          scrollEnabled={true}
+                          showsHorizontalScrollIndicator={true}
+                          style={{ flex: 1, height: 150 }}
+                          contentContainerStyle={styles.artList}
+                        >
                           {tokenArtOptions.length > 0 ? tokenArtOptions.map((print, idx) => (
                             <TouchableOpacity key={idx} style={styles.artOption} onPress={() => {
                               const img = ScryfallService.getImageUrl(print);
@@ -1990,6 +1997,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
           </View>
           
           <FlatList
+            style={{ flex: 1 }}
             data={[...library].sort((a, b) => a.name.localeCompare(b.name))}
             keyExtractor={(item) => item.instanceId}
             renderItem={({ item }) => (
@@ -2118,6 +2126,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
           </View>
           
           <FlatList
+            style={{ flex: 1 }}
             data={showZoneModal === 'exile' ? exile : graveyard}
             keyExtractor={(item) => item.instanceId}
             renderItem={({ item }) => (
@@ -2598,7 +2607,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingVertical: 4,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
@@ -2663,7 +2672,7 @@ const styles = StyleSheet.create({
   stockArea: {
     flexDirection: 'row',
     paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingVertical: 5,
     backgroundColor: '#fafafa',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',

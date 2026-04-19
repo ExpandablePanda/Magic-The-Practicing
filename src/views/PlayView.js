@@ -1173,7 +1173,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
         <View style={styles.indexContainer}>
           <View style={styles.header}>
             <Text style={styles.brandSubtitle}>MAGIC: THE PRACTICING</Text>
-            <Text style={styles.mainTitle}>PLAYTEST STUDIO</Text>
+            <Text style={styles.mainTitle}>TEST STUDIO</Text>
           </View>
           <FlatList
             data={allDecks}
@@ -1196,7 +1196,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
                 <ArrowLeft color="#333" size={24} />
               </TouchableOpacity>
               <View style={styles.headerTitleGroup}>
-                <Text style={styles.gameTitle}>Playtesting</Text>
+                <Text style={styles.gameTitle}>Testing</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View style={styles.turnBadge}>
                     <Text style={styles.turnLabel}>TURN</Text>
@@ -2326,7 +2326,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
         <Pressable style={styles.modalOverlay} onPress={() => setShowNotesModal(false)}>
           <View style={styles.notesContainer}>
             <View style={styles.notesHeader}>
-              <Text style={styles.notesTitle}>PLAYTEST INSIGHTS</Text>
+              <Text style={styles.notesTitle}>TEST INSIGHTS</Text>
               <TouchableOpacity onPress={saveDeckNote} style={styles.saveNoteBtn}>
                 <CheckCircle color="#fff" size={20} />
                 <Text style={styles.saveNoteText}>SAVE</Text>

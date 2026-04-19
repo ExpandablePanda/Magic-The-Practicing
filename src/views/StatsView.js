@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Modal, Pressable, ActivityIndicator } from 'react-native';
-import { Plus, Trash2, Users, BarChart2, User, XCircle, CheckCircle } from 'lucide-react-native';
+import { Plus, Trash2, Users, BarChart2, User, XCircle, CheckCircle, FlaskConical, Heart } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from '../services/storage';
 import { supabase } from '../services/supabase';
@@ -197,12 +197,12 @@ export default function StatsView() {
       {/* Tab Bar */}
       <View style={styles.tabBar}>
         <TouchableOpacity style={[styles.tab, tab === 'playtest' && styles.activeTab]} onPress={() => setTab('playtest')}>
-          <BarChart2 color={tab === 'playtest' ? '#b30000' : '#999'} size={16} />
-          <Text style={[styles.tabText, tab === 'playtest' && styles.activeTabText]}>PLAYTEST</Text>
+          <FlaskConical color={tab === 'playtest' ? '#b30000' : '#999'} size={16} />
+          <Text style={[styles.tabText, tab === 'playtest' && styles.activeTabText]}>TEST</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tab, tab === 'live' && styles.activeTab]} onPress={() => setTab('live')}>
-          <Users color={tab === 'live' ? '#b30000' : '#999'} size={16} />
-          <Text style={[styles.tabText, tab === 'live' && styles.activeTabText]}>LIVE GAMES</Text>
+          <Heart color={tab === 'live' ? '#b30000' : '#999'} size={16} />
+          <Text style={[styles.tabText, tab === 'live' && styles.activeTabText]}>PLAY</Text>
         </TouchableOpacity>
       </View>
 

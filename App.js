@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Platform, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Home, Play, Wrench, User as UserIcon, Heart, BarChart2 } from 'lucide-react-native';
+import { Home, Play, Wrench, User as UserIcon, Heart, BarChart2, FlaskConical } from 'lucide-react-native';
 import { supabase } from './src/services/supabase';
 
 import { StorageService } from './src/services/storage';
@@ -140,8 +140,8 @@ export default function App() {
               <Text style={[styles.navText, currentView === 'landing' && styles.activeNav]}>Home</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('play')}>
-              <Play color={currentView === 'play' ? '#b30000' : '#999'} size={24} />
-              <Text style={[styles.navText, currentView === 'play' && styles.activeNav]}>Play</Text>
+              <FlaskConical color={currentView === 'play' ? '#b30000' : '#999'} size={24} />
+              <Text style={[styles.navText, currentView === 'play' && styles.activeNav]}>Test</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('builder')}>
               <Wrench color={currentView === 'builder' ? '#b30000' : '#999'} size={24} />
@@ -149,7 +149,7 @@ export default function App() {
             </TouchableOpacity>
             <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('score')}>
               <Heart color={currentView === 'score' ? '#b30000' : '#999'} size={24} />
-              <Text style={[styles.navText, currentView === 'score' && styles.activeNav]}>Live Game</Text>
+              <Text style={[styles.navText, currentView === 'score' && styles.activeNav]}>Play</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.navItem} onPress={() => setCurrentView('stats')}>
               <BarChart2 color={currentView === 'stats' ? '#b30000' : '#999'} size={24} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { Play, Wrench, BarChart2, ChevronRight, Heart } from 'lucide-react-native';
+import { FlaskConical, Wrench, BarChart2, ChevronRight, Heart } from 'lucide-react-native';
 
 export default function LandingView({ onStartPlay, onOpenBuilder, onOpenLiveGame, onOpenStats }) {
   return (
@@ -16,10 +16,10 @@ export default function LandingView({ onStartPlay, onOpenBuilder, onOpenLiveGame
         <TouchableOpacity style={styles.primaryButton} onPress={onStartPlay}>
           <View style={styles.buttonLeft}>
             <View style={styles.iconCircle}>
-              <Play color="#b30000" size={20} fill="#b30000" />
+              <FlaskConical color="#b30000" size={20} fill="#b30000" />
             </View>
             <View>
-              <Text style={styles.buttonText}>Start Practicing</Text>
+              <Text style={styles.buttonText}>Start Testing</Text>
               <Text style={styles.buttonSubtext}>Test your active deck</Text>
             </View>
           </View>
@@ -42,10 +42,10 @@ export default function LandingView({ onStartPlay, onOpenBuilder, onOpenLiveGame
         <TouchableOpacity style={styles.primaryButton} onPress={onOpenLiveGame}>
           <View style={styles.buttonLeft}>
             <View style={[styles.iconCircle, styles.secondaryIcon]}>
-              <Heart color="#666" size={20} />
+              <Heart color="#666" size={20} fill="#666" />
             </View>
             <View>
-              <Text style={styles.rowText}>Live Game</Text>
+              <Text style={styles.rowText}>Play</Text>
               <Text style={styles.buttonSubtext}>Track life & counters</Text>
             </View>
           </View>

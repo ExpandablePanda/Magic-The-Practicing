@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Modal, Pressable, ScrollView, Platform } from 'react-native';
-import { Search, Save, Plus, Check, ArrowLeft, ChevronLeft, ChevronRight, LayoutGrid, FileText, BarChart2, UserPlus, Filter } from 'lucide-react-native';
+import { Search, Save, Plus, Check, ArrowLeft, ChevronLeft, ChevronRight, LayoutGrid, FileText, BarChart2, UserPlus, Filter, Wrench } from 'lucide-react-native';
 import { ScryfallService } from '../services/scryfall';
 import { StorageService } from '../services/storage';
 
@@ -797,7 +797,10 @@ export default function BuilderView() {
           />
           <View style={styles.createBtnWebContainer}>
             <TouchableOpacity style={styles.createNewButton} onPress={createNewDeck}>
-              <Text style={styles.importButtonText}>+ Create New Deck</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Wrench color="#fff" size={18} />
+                <Text style={styles.importButtonText}>Build New Deck</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>

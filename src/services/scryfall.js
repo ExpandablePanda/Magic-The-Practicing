@@ -109,15 +109,31 @@ export const ScryfallService = {
     if (!oracleId) return [];
     
     try {
-      const response = await rateLimitedFetch(`${SCRYFALL_BASE_URL}/cards/search?q=oracle_id:${oracleId}&unique=prints`);
-      const data = await response.json();
-      
-      if (data.object === 'error') {
-        console.error('Alternate Prints Error:', data.details);
-        return [];
+      let allCards = [];
+      let page = 1;
+      let hasMore = true;
+      const MAX_PAGES = 5; // Basic lands can have ~400 art variants (~3 pages)
+
+      while (hasMore && page <= MAX_PAGES) {
+        const response = await rateLimitedFetch(
+          `${SCRYFALL_BASE_URL}/cards/search?q=oracle_id:${oracleId}&unique=art&order=set&page=${page}`
+        );
+        const data = await response.json();
+        
+        if (data.object === 'error') {
+          console.error('Alternate Prints Error:', data.details);
+          break;
+        }
+
+        if (data.data) {
+          allCards = [...allCards, ...data.data];
+        }
+
+        hasMore = data.has_more;
+        page++;
       }
       
-      return data.data || [];
+      return allCards;
     } catch (error) {
       console.error('Fetch Alternate Prints Error:', error);
       return [];

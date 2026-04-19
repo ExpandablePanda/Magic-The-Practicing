@@ -245,7 +245,13 @@ export const StorageService = {
       if (!stats[deckId]) stats[deckId] = { wins: 0, losses: 0, games: [] };
       if (result === 'win') stats[deckId].wins++;
       else stats[deckId].losses++;
-      stats[deckId].games.push({ result, date: new Date().toISOString() });
+      
+      stats[deckId].games.push({ 
+        result, 
+        date: new Date().toISOString(),
+        turnCount: options.turnCount || null,
+        opponentFinalLife: options.opponentFinalLife ?? null
+      });
       await AsyncStorage.setItem(KEYS.STATS, JSON.stringify(stats));
 
       // Save to cloud if user is logged in
@@ -258,6 +264,7 @@ export const StorageService = {
           result,
           game_type: 'playtest',
           turn_count: options.turnCount || null,
+          opponent_final_life: options.opponentFinalLife ?? null,
           logged_by: user.id,
         });
       }

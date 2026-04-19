@@ -349,8 +349,14 @@ export default function BuilderView() {
     const timer = setTimeout(async () => {
       if (previewCard && previewCard.oracle_id) {
         setLoadingPrints(true);
-        const prints = await ScryfallService.getAlternatePrintings(previewCard.oracle_id);
-        setAlternatePrints(prints);
+        let prints = await ScryfallService.getAlternatePrintings(previewCard.oracle_id);
+        // Sort to put Full Art versions first in the horizontal list
+        const sortedPrints = prints.sort((a, b) => {
+          if (a.full_art && !b.full_art) return -1;
+          if (!a.full_art && b.full_art) return 1;
+          return 0;
+        });
+        setAlternatePrints(sortedPrints);
         setLoadingPrints(false);
       } else {
         setAlternatePrints([]);
@@ -680,10 +686,25 @@ export default function BuilderView() {
   const renderCardItem = ({ item, isCommander = false, list = [], index = null }) => {
     const price = item.prices?.usd ? `$${parseFloat(item.prices.usd).toFixed(2)}` : null;
     const isIllegal = item.legalities?.commander === 'not_legal' || item.legalities?.commander === 'banned';
+
+    // Calculate how many of this card are in the deck (for search feedback)
+    const inDeckCount = currentDeck?.cards?.filter(c => c.name.toLowerCase() === item.name.toLowerCase()).length || 0;
+    const isThisCardCommander = currentDeck?.commander?.name.toLowerCase() === item.name.toLowerCase();
+    const totalCount = inDeckCount + (isThisCardCommander ? 1 : 0);
+
     return (
       <View style={[styles.cardItem, isCommander && styles.commanderItem]}>
         <TouchableOpacity onPress={() => handleOpenPreview(item, list, index)} onLongPress={() => handleOpenPreview(item, list, index)}>
-          <Image source={{ uri: ScryfallService.getImageUrl(item, 'small') }} style={styles.cardThumb} resizeMode="contain" />
+          <View>
+            <Image source={{ uri: ScryfallService.getImageUrl(item, 'small') }} style={styles.cardThumb} resizeMode="contain" />
+            {totalCount > 0 && (
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>
+                  {isThisCardCommander && inDeckCount === 0 ? '★' : `x${totalCount}`}
+                </Text>
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.cardInfo}
@@ -1875,6 +1896,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     color: '#333',
+  },
+  countBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#b30000',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  countBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
   },
 });
 

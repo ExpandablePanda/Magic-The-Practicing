@@ -129,28 +129,68 @@ export default function StatsView() {
 
   // Unified Playtest Stats: Calculated from cloud history if logged in, otherwise local
   const processedStats = (() => {
-    if (!mySession || myCloudResults.length === 0) return stats;
-    
-    // Reconstruct by-deck stats from cloud history
     const reconciled = {};
-    myCloudResults
-      .filter(r => r.game_type === 'playtest')
-      .forEach(r => {
+    
+    // Determine source of playtest data
+    const useCloud = mySession && myCloudResults.length > 0;
+    const cloudPlaytests = useCloud ? myCloudResults.filter(r => r.game_type === 'playtest') : [];
+    
+    // If cloud is available, rebuild from history. Otherwise use local stats structure.
+    if (useCloud) {
+      cloudPlaytests.forEach(r => {
         const id = r.deck_id;
-        if (!reconciled[id]) reconciled[id] = { wins: 0, losses: 0 };
-        if (r.result === 'win') reconciled[id].wins++;
-        else reconciled[id].losses++;
+        if (!reconciled[id]) reconciled[id] = { totalGames: 0, turnSum: 0, lifeSum: 0, bestTurn: Infinity };
+        reconciled[id].totalGames++;
+        if (r.turn_count) {
+          reconciled[id].turnSum += r.turn_count;
+          if (r.turn_count < reconciled[id].bestTurn) reconciled[id].bestTurn = r.turn_count;
+        }
+        if (r.opponent_final_life !== null) reconciled[id].lifeSum += r.opponent_final_life;
       });
+    } else {
+      // Fallback to local stats (if turn history is available)
+      Object.keys(stats).forEach(id => {
+        const dStats = stats[id];
+        if (!dStats.games) return;
+        const pts = dStats.games;
+        if (!reconciled[id]) reconciled[id] = { totalGames: 0, turnSum: 0, lifeSum: 0, bestTurn: Infinity };
+        pts.forEach(g => {
+          reconciled[id].totalGames++;
+          const t = g.turnCount || g.turn_count;
+          if (t) {
+            reconciled[id].turnSum += t;
+            if (t < reconciled[id].bestTurn) reconciled[id].bestTurn = t;
+          }
+          const l = g.opponentFinalLife ?? g.opponent_final_life;
+          if (l !== undefined && l !== null) reconciled[id].lifeSum += l;
+        });
+      });
+    }
+
+    // Finalize metrics
+    Object.keys(reconciled).forEach(id => {
+      const s = reconciled[id];
+      s.avgTurn = s.totalGames > 0 ? (s.turnSum / s.totalGames).toFixed(1) : '—';
+      s.avgOverkill = s.totalGames > 0 ? (s.lifeSum / s.totalGames).toFixed(1) : '—';
+      if (s.bestTurn === Infinity) s.bestTurn = '—';
+    });
+    
     return reconciled;
   })();
 
-  const playtestTotal = Object.values(processedStats).reduce(
-    (acc, s) => ({ wins: acc.wins + (s.wins || 0), losses: acc.losses + (s.losses || 0) }),
-    { wins: 0, losses: 0 }
+  const playtestSummary = Object.values(processedStats).reduce(
+    (acc, s) => ({
+      totalGames: acc.totalGames + s.totalGames,
+      turnSum: acc.turnSum + s.turnSum,
+      lifeSum: acc.lifeSum + s.lifeSum,
+      bestOverall: s.bestTurn !== '—' ? Math.min(acc.bestOverall, s.bestTurn) : acc.bestOverall
+    }),
+    { totalGames: 0, turnSum: 0, lifeSum: 0, bestOverall: Infinity }
   );
-  const winRate = playtestTotal.wins + playtestTotal.losses > 0
-    ? Math.round((playtestTotal.wins / (playtestTotal.wins + playtestTotal.losses)) * 100)
-    : null;
+  
+  const globalAvgTurn = playtestSummary.totalGames > 0 ? (playtestSummary.turnSum / playtestSummary.totalGames).toFixed(1) : '—';
+  const globalAvgOverkill = playtestSummary.totalGames > 0 ? (playtestSummary.lifeSum / playtestSummary.totalGames).toFixed(1) : '—';
+  const bestTurn = playtestSummary.bestOverall === Infinity ? '—' : playtestSummary.bestOverall;
 
   return (
     <View style={styles.container}>
@@ -173,16 +213,16 @@ export default function StatsView() {
           <>
             <View style={styles.summaryRow}>
               <View style={styles.summaryCard}>
-                <Text style={styles.summaryNum}>{playtestTotal.wins}</Text>
-                <Text style={styles.summaryLabel}>WINS</Text>
+                <Text style={styles.summaryNum}>{globalAvgTurn}</Text>
+                <Text style={styles.summaryLabel}>AVG WIN TURN</Text>
               </View>
               <View style={styles.summaryCard}>
-                <Text style={styles.summaryNum}>{playtestTotal.losses}</Text>
-                <Text style={styles.summaryLabel}>LOSSES</Text>
+                <Text style={styles.summaryNum}>{bestTurn}</Text>
+                <Text style={styles.summaryLabel}>BEST TURN</Text>
               </View>
               <View style={[styles.summaryCard, { borderColor: '#b30000' }]}>
-                <Text style={[styles.summaryNum, { color: '#b30000' }]}>{winRate !== null ? `${winRate}%` : '—'}</Text>
-                <Text style={styles.summaryLabel}>WIN RATE</Text>
+                <Text style={[styles.summaryNum, { color: '#b30000' }]}>{globalAvgOverkill}</Text>
+                <Text style={styles.summaryLabel}>AVG OVERKILL</Text>
               </View>
             </View>
 
@@ -190,22 +230,20 @@ export default function StatsView() {
             {decks.length === 0 && <Text style={styles.empty}>No decks yet.</Text>}
             {decks.map(deck => {
               const s = processedStats[deck.id];
-              if (!s || (s.wins === 0 && s.losses === 0)) return null;
-              const total = s.wins + s.losses;
-              const rate = Math.round((s.wins / total) * 100);
+              if (!s || s.totalGames === 0) return null;
               return (
                 <View key={deck.id} style={styles.deckRow}>
                   <View style={styles.deckRowInfo}>
                     <Text style={styles.deckRowName}>{deck.name}</Text>
-                    <Text style={styles.deckRowRecord}>{s.wins}W – {s.losses}L · {rate}%</Text>
+                    <Text style={styles.deckRowRecord}>Avg {s.avgTurn} · Best {s.bestTurn} · {s.totalGames} sessions</Text>
                   </View>
                   <View style={styles.deckBarBg}>
-                    <View style={[styles.deckBarFill, { width: `${rate}%` }]} />
+                    <View style={[styles.deckBarFill, { width: s.avgTurn !== '—' ? `${Math.max(10, Math.min(100, (10 / parseFloat(s.avgTurn)) * 50))}%` : '0%' }]} />
                   </View>
                 </View>
               );
             }).filter(Boolean)}
-            {decks.every(d => !processedStats[d.id] || (processedStats[d.id].wins === 0 && processedStats[d.id].losses === 0)) && (
+            {Object.keys(processedStats).length === 0 && (
               <Text style={styles.empty}>Log results from the playtest reset button to see stats here.</Text>
             )}
           </>
@@ -216,7 +254,7 @@ export default function StatsView() {
           <>
             {/* Your own performance */}
             {mySession?.user && (() => {
-              const myResults = myCloudResults;
+              const myResults = myCloudResults.filter(r => r.game_type !== 'playtest');
               const myWins = myResults.filter(r => r.result === 'win').length;
               const myLosses = myResults.filter(r => r.result === 'loss').length;
               const myTotal = myWins + myLosses;

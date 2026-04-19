@@ -834,7 +834,7 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
   const modifyLife = (player, amount) => {
     pushHistory();
     if (player === 'me') setMyLife(prev => Math.max(0, prev + amount));
-    else setOppLife(prev => Math.max(0, prev + amount));
+    else setOppLife(prev => prev + amount);
   };
 
   const pushHistory = () => {
@@ -2151,33 +2151,32 @@ export default function PlayView({ onSetFooterVisible = () => {} }) {
       <Modal visible={showResultModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.resultModal}>
-            <Text style={styles.resultTitle}>LOG RESULT</Text>
+            <Text style={styles.resultTitle}>GOLDFISH RESULT</Text>
             <Text style={styles.resultSubtitle}>Turn {turnNumber} · {fullDeckData?.name}</Text>
+            <Text style={[styles.resultSubtitle, { marginTop: -5, opacity: 0.8 }]}>Final Opponent Level: {oppLife}</Text>
+            
             <TouchableOpacity
-              style={[styles.resultBtn, { backgroundColor: '#2d8a4e' }]}
+              style={[styles.resultBtn, { backgroundColor: '#2d8a4e', marginTop: 10 }]}
               onPress={async () => {
-                if (fullDeckData?.id) await StorageService.recordResult(fullDeckData.id, 'win', { deckName: fullDeckData.name, turnCount: turnNumber });
+                if (fullDeckData?.id) {
+                  await StorageService.recordResult(fullDeckData.id, 'win', { 
+                    deckName: fullDeckData.name, 
+                    turnCount: turnNumber,
+                    opponentFinalLife: oppLife
+                  });
+                }
                 setShowResultModal(false);
                 selectDeck(fullDeckData);
               }}
             >
-              <Text style={styles.resultBtnText}>🏆  WIN</Text>
+              <Text style={styles.resultBtnText}>🏆  RECORD WIN</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.resultBtn, { backgroundColor: '#b30000' }]}
-              onPress={async () => {
-                if (fullDeckData?.id) await StorageService.recordResult(fullDeckData.id, 'loss', { deckName: fullDeckData.name, turnCount: turnNumber });
-                setShowResultModal(false);
-                selectDeck(fullDeckData);
-              }}
-            >
-              <Text style={styles.resultBtnText}>💀  LOSS</Text>
-            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.resultSkip}
               onPress={() => { setShowResultModal(false); selectDeck(fullDeckData); }}
             >
-              <Text style={styles.resultSkipText}>Skip</Text>
+              <Text style={styles.resultSkipText}>Discard Result</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -3043,6 +3042,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginTop: 90,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

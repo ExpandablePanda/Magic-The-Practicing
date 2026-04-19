@@ -13,7 +13,7 @@ import ScoreView from './src/views/ScoreView';
 import StatsView from './src/views/StatsView';
 import WebShell from './src/components/WebShell';
 
-const APP_VERSION = 'v1.7.6';
+const APP_VERSION = 'v1.7.7';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('landing');
@@ -28,7 +28,13 @@ export default function App() {
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         setSession(session);
-        if (session?.user) StorageService.ensureProfile(session.user);
+        if (session?.user) {
+          StorageService.ensureProfile(session.user);
+          // Bi-directional sync on login/session change
+          StorageService.syncFromCloud().then(() => {
+            StorageService.syncToCloud();
+          });
+        }
       });
 
       return () => subscription.unsubscribe();

@@ -2677,6 +2677,7 @@ const styles = StyleSheet.create({
   utilityBanner: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-start',
     paddingHorizontal: 15,
     paddingVertical: 10,
     backgroundColor: '#fff',
@@ -2756,12 +2757,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     alignItems: 'center',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-start',
     overflow: 'visible',
   },
   stockContent: {
     paddingHorizontal: 15,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-start',
     gap: 15,
   },
   stockItem: {
@@ -2859,6 +2862,7 @@ const styles = StyleSheet.create({
   manaHUD: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-start',
     gap: 4,
     marginBottom: 8,
   },

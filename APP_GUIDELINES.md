@@ -4,8 +4,14 @@ This document contains strict rules that the AI assistant MUST follow when makin
 
 ## 1. Version Control & Bumping
 - **CRITICAL**: Every time a functional change, bug fix, or UI update is made, the version number MUST be incremented by `0.0.1`.
-- Update **`App.js`**: Change the `APP_VERSION` constant (e.g., from `V1.3.4` to `V1.3.5`).
-- Update **`package.json`**: Change the `"version"` field to match.
+- **Automated Update**: Run the following command to update all files (App.js, package.json, app.json) at once:
+  ```bash
+  npm run bump X.Y.Z
+  ```
+- **Manual Checklist** (If command fails):
+  - Update **`App.js`**: Change the `APP_VERSION` constant (e.g., from `v1.3.4` to `v1.3.5`).
+  - Update **`package.json`**: Change the `"version"` field to match.
+  - Update **`app.json`**: Change the `"version"` field to match.
 
 ## 2. Standardized Layout
 - All pages MUST use the static header layout established in `PlayView.js` / `BuilderView.js`.

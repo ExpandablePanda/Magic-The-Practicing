@@ -127,8 +127,24 @@ export default function StatsView() {
     setSelectedProfile(null);
   };
 
-  // Aggregate playtest stats across all decks
-  const playtestTotal = Object.values(stats).reduce(
+  // Unified Playtest Stats: Calculated from cloud history if logged in, otherwise local
+  const processedStats = (() => {
+    if (!mySession || myCloudResults.length === 0) return stats;
+    
+    // Reconstruct by-deck stats from cloud history
+    const reconciled = {};
+    myCloudResults
+      .filter(r => r.game_type === 'playtest')
+      .forEach(r => {
+        const id = r.deck_id;
+        if (!reconciled[id]) reconciled[id] = { wins: 0, losses: 0 };
+        if (r.result === 'win') reconciled[id].wins++;
+        else reconciled[id].losses++;
+      });
+    return reconciled;
+  })();
+
+  const playtestTotal = Object.values(processedStats).reduce(
     (acc, s) => ({ wins: acc.wins + (s.wins || 0), losses: acc.losses + (s.losses || 0) }),
     { wins: 0, losses: 0 }
   );
@@ -173,7 +189,7 @@ export default function StatsView() {
             <Text style={styles.sectionHeader}>BY DECK</Text>
             {decks.length === 0 && <Text style={styles.empty}>No decks yet.</Text>}
             {decks.map(deck => {
-              const s = stats[deck.id];
+              const s = processedStats[deck.id];
               if (!s || (s.wins === 0 && s.losses === 0)) return null;
               const total = s.wins + s.losses;
               const rate = Math.round((s.wins / total) * 100);
@@ -189,7 +205,7 @@ export default function StatsView() {
                 </View>
               );
             }).filter(Boolean)}
-            {decks.every(d => !stats[d.id] || (stats[d.id].wins === 0 && stats[d.id].losses === 0)) && (
+            {decks.every(d => !processedStats[d.id] || (processedStats[d.id].wins === 0 && processedStats[d.id].losses === 0)) && (
               <Text style={styles.empty}>Log results from the playtest reset button to see stats here.</Text>
             )}
           </>
